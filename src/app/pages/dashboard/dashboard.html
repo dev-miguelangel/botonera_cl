@@ -165,6 +165,28 @@
               Error al activar notificaciones — revisa los permisos del navegador
             </div>
           }
+          @case ('ios-not-installed') {
+            <div class="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800 space-y-1">
+              <p class="font-semibold">Las notificaciones requieren instalar la app</p>
+              <p class="text-amber-700 text-xs leading-relaxed">
+                En Safari, toca <strong>Compartir</strong> (⎙) → <strong>Añadir a pantalla de inicio</strong>.
+                Luego abre la app desde el ícono y activa las notificaciones.
+              </p>
+            </div>
+          }
+          @case ('ios-needs-permission') {
+            <div class="flex items-center gap-3">
+              <button
+                (click)="activarNotificaciones()"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                Activar notificaciones
+              </button>
+              <span class="text-xs text-gray-400">Toca para habilitar en este dispositivo</span>
+            </div>
+          }
         }
       </div>
 

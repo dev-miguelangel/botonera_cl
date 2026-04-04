@@ -4,6 +4,9 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth';
 import { PushService } from '../../core/push';
 
+type SubStatus = 'loading' | 'subscribed' | 'already' | 'disabled' | 'error'
+               | 'ios-not-installed' | 'ios-needs-permission';
+
 @Component({
   selector: 'app-dashboard',
   imports: [DatePipe],
@@ -14,12 +17,17 @@ export class Dashboard implements OnInit, OnDestroy {
   readonly push = inject(PushService);
   private msgSub?: Subscription;
 
+  // Detect iOS and standalone (PWA installed) mode
+  readonly isIos        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  readonly isStandalone = ('standalone' in navigator && !!(navigator as any).standalone)
+                       || window.matchMedia('(display-mode: standalone)').matches;
+
   sidebarOpen   = signal(false);
   showModal     = signal(false);
   subscribers   = signal<any[]>([]);
   pushStatus    = signal<'idle' | 'sending' | 'sent' | 'error'>('idle');
   pushMsg       = signal('');
-  subStatus     = signal<'loading' | 'subscribed' | 'already' | 'disabled' | 'error'>('loading');
+  subStatus     = signal<SubStatus>('loading');
   foregroundMsg = signal<string | null>(null);
 
   userName = computed(() => {
@@ -33,8 +41,16 @@ export class Dashboard implements OnInit, OnDestroy {
   });
 
   async ngOnInit() {
-    const result = await this.push.autoSubscribe();
-    this.subStatus.set(result);
+    if (this.isIos && !this.isStandalone) {
+      // Safari on iPhone/iPad (not installed as PWA) — push not available
+      this.subStatus.set('ios-not-installed');
+    } else if (this.isIos) {
+      // Installed PWA on iOS — must request permission via user gesture, not auto
+      this.subStatus.set('ios-needs-permission');
+    } else {
+      const result = await this.push.autoSubscribe();
+      this.subStatus.set(result);
+    }
 
     // Toast cuando la app está en primer plano
     this.msgSub = this.push.swPush.messages.subscribe((msg: any) => {
@@ -46,6 +62,12 @@ export class Dashboard implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.msgSub?.unsubscribe();
+  }
+
+  async activarNotificaciones() {
+    this.subStatus.set('loading');
+    const result = await this.push.autoSubscribe();
+    this.subStatus.set(result);
   }
 
   async presionar() {
