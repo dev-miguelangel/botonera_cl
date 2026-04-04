@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
+import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
 import { environment } from '../../environments/environment';
@@ -17,7 +18,7 @@ export class PushService {
     if (!this.swPush.isEnabled) return 'disabled';
 
     try {
-      let sub = await this.swPush.subscription.pipe().toPromise().catch(() => null);
+      let sub = await firstValueFrom(this.swPush.subscription.pipe(timeout(5000), catchError(() => of(null))));
 
       if (!sub) {
         sub = await this.swPush.requestSubscription({
@@ -36,7 +37,7 @@ export class PushService {
 
   /** Desuscribir del botón (elimina solo la fila de DB, no la suscripción del browser) */
   async unsubscribe(buttonId: string): Promise<void> {
-    const sub = await this.swPush.subscription.toPromise().catch(() => null);
+    const sub = await firstValueFrom(this.swPush.subscription.pipe(timeout(5000), catchError(() => of(null))));
     if (!sub) return;
 
     await this.supabase
@@ -47,7 +48,7 @@ export class PushService {
   }
 
   async isSubscribed(buttonId: string): Promise<boolean> {
-    const sub = await this.swPush.subscription.toPromise().catch(() => null);
+    const sub = await firstValueFrom(this.swPush.subscription.pipe(timeout(5000), catchError(() => of(null))));
     if (!sub) return false;
 
     const { data } = await this.supabase
