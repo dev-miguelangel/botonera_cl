@@ -1,6 +1,5 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
-import { AuthService } from './auth';
 
 export interface Button {
   id: string;
@@ -28,19 +27,26 @@ export interface CreateButtonDto {
 @Injectable({ providedIn: 'root' })
 export class ButtonService {
   private supabase = inject(SupabaseService).client;
-  private auth     = inject(AuthService);
+
+  private async getUserId(): Promise<string | null> {
+    const { data: { session } } = await this.supabase.auth.getSession();
+    return session?.user?.id ?? null;
+  }
 
   async getMyButtons(): Promise<Button[]> {
+    const userId = await this.getUserId();
+    if (!userId) return [];
     const { data } = await this.supabase
       .from('buttons')
       .select('*')
-      .eq('owner_id', this.auth.user()!.id)
+      .eq('owner_id', userId)
       .order('created_at', { ascending: false });
     return data ?? [];
   }
 
   async getSubscribedButtons(): Promise<Button[]> {
-    const userId = this.auth.user()!.id;
+    const userId = await this.getUserId();
+    if (!userId) return [];
     const { data } = await this.supabase
       .from('subscriptions')
       .select('button_id, buttons(*)')
@@ -61,9 +67,11 @@ export class ButtonService {
   }
 
   async create(dto: CreateButtonDto): Promise<Button> {
+    const userId = await this.getUserId();
+    if (!userId) throw new Error('Sin sesión');
     const { data, error } = await this.supabase
       .from('buttons')
-      .insert({ ...dto, owner_id: this.auth.user()!.id })
+      .insert({ ...dto, owner_id: userId })
       .select()
       .single();
     if (error) throw new Error(error.message);
