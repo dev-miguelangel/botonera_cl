@@ -2,14 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
 import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 import { SupabaseService } from './supabase';
-import { AuthService } from './auth';
 import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class PushService {
   readonly swPush  = inject(SwPush);
   private supabase = inject(SupabaseService).client;
-  private auth     = inject(AuthService);
 
   get isEnabled() { return this.swPush.isEnabled; }
 
@@ -61,7 +59,8 @@ export class PushService {
   }
 
   private async saveToDb(buttonId: string, sub: PushSubscription): Promise<void> {
-    const user = this.auth.user();
+    const { data: { session } } = await this.supabase.auth.getSession();
+    const user = session?.user;
     if (!user) return;
 
     const keys = sub.toJSON().keys ?? {};
@@ -79,7 +78,7 @@ export class PushService {
   }
 
   async sendPush(buttonId: string, pressedBy: string): Promise<{ sent: number }> {
-    const session = this.auth.session();
+    const { data: { session } } = await this.supabase.auth.getSession();
     if (!session) throw new Error('Sin sesión');
 
     const res = await fetch(
