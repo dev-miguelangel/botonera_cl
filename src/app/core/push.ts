@@ -1,6 +1,5 @@
 import { Injectable, inject } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
-import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
 import { environment } from '../../environments/environment';
@@ -13,63 +12,72 @@ export class PushService {
 
   get isEnabled() { return this.swPush.isEnabled; }
 
-  // Suscribir automáticamente al usuario al botón de prueba
-  async autoSubscribe(): Promise<'subscribed' | 'already' | 'disabled' | 'error'> {
+  /** Suscribir al usuario a un botón específico */
+  async subscribe(buttonId: string): Promise<'subscribed' | 'already' | 'disabled' | 'error'> {
     if (!this.swPush.isEnabled) return 'disabled';
 
     try {
-      // Timeout de 5s por si el SW todavía no terminó de registrarse
-      const existing = await firstValueFrom(
-        this.swPush.subscription.pipe(
-          timeout(5000),
-          catchError(() => of(null))
-        )
-      );
+      let sub = await this.swPush.subscription.pipe().toPromise().catch(() => null);
 
-      if (existing) {
-        await this.saveToDb(existing);
-        return 'already';
+      if (!sub) {
+        sub = await this.swPush.requestSubscription({
+          serverPublicKey: environment.vapidPublicKey,
+        });
       }
 
-      const sub = await this.swPush.requestSubscription({
-        serverPublicKey: environment.vapidPublicKey,
-      });
-      await this.saveToDb(sub);
-      return 'subscribed';
+      const already = await this.isSubscribed(buttonId);
+      await this.saveToDb(buttonId, sub!);
+      return already ? 'already' : 'subscribed';
     } catch (e) {
-      console.error('autoSubscribe error:', e);
+      console.error('PushService.subscribe error:', e);
       return 'error';
     }
   }
 
-  private async saveToDb(sub: PushSubscription): Promise<void> {
+  /** Desuscribir del botón (elimina solo la fila de DB, no la suscripción del browser) */
+  async unsubscribe(buttonId: string): Promise<void> {
+    const sub = await this.swPush.subscription.toPromise().catch(() => null);
+    if (!sub) return;
+
+    await this.supabase
+      .from('subscriptions')
+      .delete()
+      .eq('button_id', buttonId)
+      .eq('endpoint', sub.endpoint);
+  }
+
+  async isSubscribed(buttonId: string): Promise<boolean> {
+    const sub = await this.swPush.subscription.toPromise().catch(() => null);
+    if (!sub) return false;
+
+    const { data } = await this.supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('button_id', buttonId)
+      .eq('endpoint', sub.endpoint)
+      .maybeSingle();
+    return !!data;
+  }
+
+  private async saveToDb(buttonId: string, sub: PushSubscription): Promise<void> {
     const user = this.auth.user();
     if (!user) return;
 
     const keys = sub.toJSON().keys ?? {};
     const { error } = await this.supabase.from('subscriptions').upsert({
+      button_id:  buttonId,
       user_id:    user.id,
       user_name:  user.user_metadata?.['full_name'] ?? user.email ?? 'Anónimo',
       user_email: user.email ?? '',
       endpoint:   sub.endpoint,
       p256dh:     keys['p256dh'],
       auth_token: keys['auth'],
-    }, { onConflict: 'endpoint' });
+    }, { onConflict: 'button_id,endpoint' });
 
-    if (error) console.error('saveToDb error:', error);
+    if (error) console.error('PushService.saveToDb error:', error);
   }
 
-  // Obtener todos los suscritos (solo para el modal de admin)
-  async getSubscribers() {
-    const { data } = await this.supabase
-      .from('subscriptions')
-      .select('id, user_name, user_email, created_at')
-      .order('created_at', { ascending: false });
-    return data ?? [];
-  }
-
-  // Enviar push a todos los suscritos via Edge Function
-  async sendPush(pressedBy: string): Promise<{ sent: number }> {
+  async sendPush(buttonId: string, pressedBy: string): Promise<{ sent: number }> {
     const session = this.auth.session();
     if (!session) throw new Error('Sin sesión');
 
@@ -78,10 +86,10 @@ export class PushService {
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type':  'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ pressed_by: pressedBy }),
+        body: JSON.stringify({ button_id: buttonId, pressed_by: pressedBy }),
       }
     );
 

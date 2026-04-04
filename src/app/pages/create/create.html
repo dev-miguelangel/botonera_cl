@@ -1,0 +1,94 @@
+<div class="min-h-screen bg-gray-50 flex items-start justify-center px-4 py-12">
+  <div class="w-full max-w-lg">
+
+    <!-- Back -->
+    <a routerLink="/dashboard"
+       class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 mb-6 transition">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Volver
+    </a>
+
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+
+      <h1 class="text-2xl font-extrabold text-gray-900 mb-1">Nuevo botón</h1>
+      <p class="text-sm text-gray-400 mb-8">Crea un botón para notificar a tus suscriptores</p>
+
+      <div class="space-y-5">
+
+        <!-- Nombre -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nombre *</label>
+          <input
+            type="text"
+            [(ngModel)]="name"
+            (input)="onNameChange()"
+            placeholder="Ej: Llamar al médico"
+            maxlength="60"
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
+        </div>
+
+        <!-- Descripción -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Descripción <span class="text-gray-400 font-normal">(opcional)</span></label>
+          <input
+            type="text"
+            [(ngModel)]="description"
+            placeholder="Para qué sirve este botón"
+            maxlength="120"
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" />
+        </div>
+
+        <!-- Slug -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">URL del botón *</label>
+          <div class="flex items-center gap-0 rounded-xl border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500">
+            <span class="px-3 py-3 bg-gray-50 text-gray-400 text-xs border-r border-gray-200 whitespace-nowrap">botoneracl.vercel.app/button/</span>
+            <input
+              type="text"
+              [(ngModel)]="slug"
+              placeholder="mi-boton"
+              class="flex-1 px-3 py-3 text-sm focus:outline-none" />
+          </div>
+        </div>
+
+        <!-- Política -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">¿Quién puede presionar?</label>
+          <select
+            [(ngModel)]="policy"
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white transition">
+            <option value="anyone_with_link">Cualquiera con el enlace</option>
+            <option value="subscribers">Solo suscriptores</option>
+            <option value="owner_only">Solo yo</option>
+          </select>
+        </div>
+
+        <!-- Error -->
+        @if (error()) {
+          <p class="text-sm text-red-500 font-medium">{{ error() }}</p>
+        }
+
+        <!-- Submit -->
+        <button
+          (click)="submit()"
+          [disabled]="!name.trim() || !slug.trim() || submitting()"
+          class="w-full py-3.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-200">
+          @if (submitting()) {
+            <span class="flex items-center justify-center gap-2">
+              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              Creando...
+            </span>
+          } @else {
+            Crear botón
+          }
+        </button>
+
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,233 @@
+<div class="min-h-screen bg-gray-50">
+
+  @if (loading()) {
+    <div class="flex items-center justify-center min-h-screen">
+      <svg class="w-8 h-8 animate-spin text-indigo-600" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+    </div>
+  } @else if (notFound()) {
+    <div class="flex flex-col items-center justify-center min-h-screen gap-4">
+      <p class="text-gray-500 font-semibold">Botón no encontrado</p>
+      <a routerLink="/dashboard" class="text-indigo-600 text-sm hover:underline">Volver al dashboard</a>
+    </div>
+  } @else {
+
+    <!-- HEADER -->
+    <div class="bg-white border-b border-gray-100 sticky top-0 z-30">
+      <div class="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
+        <a routerLink="/dashboard" class="text-gray-400 hover:text-gray-700 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+        </a>
+        <span class="font-extrabold text-gray-900 flex-1 truncate">{{ button()!.name }}</span>
+        @if (isOwner()) {
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600">Dueño</span>
+        }
+      </div>
+    </div>
+
+    <div class="max-w-2xl mx-auto px-4 py-8 space-y-6">
+
+      <!-- PRESS AREA -->
+      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 flex flex-col items-center gap-6">
+
+        @if (button()!.description) {
+          <p class="text-sm text-gray-500 text-center">{{ button()!.description }}</p>
+        }
+
+        <!-- Botón principal -->
+        <button
+          (click)="presionar()"
+          [disabled]="!canPress() || pushStatus() === 'sending'"
+          class="w-36 h-36 rounded-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white shadow-2xl shadow-indigo-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center gap-1">
+          @if (pushStatus() === 'sending') {
+            <svg class="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+          } @else {
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            <span class="text-sm font-bold">Presionar</span>
+          }
+        </button>
+
+        @if (!canPress() && !isOwner()) {
+          <p class="text-xs text-gray-400">
+            @if (button()!.press_policy === 'subscribers') {
+              Debes suscribirte para poder presionar este botón
+            } @else {
+              Solo el dueño puede presionar este botón
+            }
+          </p>
+        }
+
+        @if (pushStatus() === 'sent') {
+          <p class="text-sm font-semibold text-green-600">✓ {{ pushMsg() }}</p>
+        }
+        @if (pushStatus() === 'error') {
+          <p class="text-sm font-semibold text-red-500">✗ {{ pushMsg() }}</p>
+        }
+
+        <!-- Suscripción -->
+        @if (!isOwner()) {
+          @if (isIos && !isStandalone) {
+            <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 text-center">
+              <strong>Instala la app</strong> en tu pantalla de inicio para activar notificaciones.<br>
+              Safari → Compartir (⎙) → Añadir a pantalla de inicio
+            </div>
+          } @else {
+            <button
+              (click)="toggleSubscribe()"
+              [disabled]="subLoading()"
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 disabled:opacity-50"
+              [class]="subscribed()
+                ? 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200'">
+              @if (subLoading()) {
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+              } @else if (subscribed()) {
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              } @else {
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+              }
+              {{ subscribed() ? 'Suscrito' : 'Suscribirse' }}
+            </button>
+          }
+        }
+
+      </div>
+
+      <!-- PANEL OWNER -->
+      @if (isOwner()) {
+        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+
+          <!-- Tabs -->
+          <div class="flex border-b border-gray-100">
+            @for (tab of [['suscritos','Suscritos'],['historial','Historial'],['compartir','Compartir']] ; track tab[0]) {
+              <button
+                (click)="activeTab.set($any(tab[0]))"
+                class="flex-1 py-3.5 text-sm font-semibold transition"
+                [class]="activeTab() === tab[0]
+                  ? 'text-indigo-600 border-b-2 border-indigo-600'
+                  : 'text-gray-400 hover:text-gray-700'">
+                {{ tab[1] }}
+              </button>
+            }
+          </div>
+
+          <!-- Tab: Suscritos -->
+          @if (activeTab() === 'suscritos') {
+            <div class="p-4 space-y-2">
+              @if (subscribers().length === 0) {
+                <p class="text-center text-gray-400 text-sm py-8">Sin suscriptores aún</p>
+              }
+              @for (sub of subscribers(); track sub.id) {
+                <div class="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50">
+                  <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
+                    {{ (sub.user_name ?? 'A')[0].toUpperCase() }}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800 truncate">{{ sub.user_name ?? 'Anónimo' }}</p>
+                    <p class="text-xs text-gray-400 truncate">{{ sub.user_email }}</p>
+                  </div>
+                  <p class="text-xs text-gray-300 flex-shrink-0">{{ sub.created_at | date:'dd/MM HH:mm' }}</p>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Tab: Historial -->
+          @if (activeTab() === 'historial') {
+            <div class="p-4 space-y-2">
+              @if (pressLog().length === 0) {
+                <p class="text-center text-gray-400 text-sm py-8">Sin presiones aún</p>
+              }
+              @for (entry of pressLog(); track entry.id) {
+                <div class="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50">
+                  <div class="w-2 h-2 rounded-full bg-indigo-400 flex-shrink-0"></div>
+                  <p class="text-sm text-gray-700 flex-1">
+                    {{ entry.profiles?.display_name ?? 'Alguien' }}
+                  </p>
+                  <p class="text-xs text-gray-400">{{ entry.pressed_at | date:'dd/MM HH:mm' }}</p>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Tab: Compartir -->
+          @if (activeTab() === 'compartir') {
+            <div class="p-6 space-y-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-700 mb-1">URL del botón</p>
+                <p class="text-xs text-gray-400 mb-3">Comparte este enlace para que otros puedan ver y presionar tu botón</p>
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    readonly
+                    [value]="origin + '/button/' + button()!.slug"
+                    class="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-gray-50" />
+                  <button
+                    (click)="copyButtonUrl()"
+                    class="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition whitespace-nowrap">
+                    {{ copied() ? '¡Copiado!' : 'Copiar' }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="border-t border-gray-100 pt-4">
+                <p class="text-sm font-semibold text-gray-700 mb-1">Enlace de invitación</p>
+                <p class="text-xs text-gray-400 mb-3">Genera un link temporal (7 días) para que otros se suscriban automáticamente</p>
+
+                @if (!inviteUrl()) {
+                  <button
+                    (click)="generateInvite()"
+                    [disabled]="inviteLoading()"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50">
+                    @if (inviteLoading()) {
+                      <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                    }
+                    Generar enlace de invitación
+                  </button>
+                } @else {
+                  <div class="flex gap-2">
+                    <input type="text" readonly [value]="inviteUrl()"
+                      class="flex-1 px-3 py-2.5 rounded-xl border border-indigo-200 text-sm text-indigo-700 bg-indigo-50" />
+                    <button (click)="copyInvite()"
+                      class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition">
+                      {{ copied() ? '¡Copiado!' : 'Copiar' }}
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-2">Este enlace expira en 7 días</p>
+                }
+              </div>
+            </div>
+          }
+
+        </div>
+      }
+
+    </div>
+  }
+
+</div>
+
+<!-- TOAST PRIMER PLANO -->
+@if (foregroundMsg()) {
+  <div class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 max-w-sm w-full mx-4">
+    <span class="text-lg">🔔</span>
+    <span>{{ foregroundMsg() }}</span>
+  </div>
+}

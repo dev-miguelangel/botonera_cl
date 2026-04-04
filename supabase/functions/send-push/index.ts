@@ -3,6 +3,7 @@ import webpush from 'https://esm.sh/web-push@3.6.7';
 
 const SUPABASE_URL          = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_ANON_KEY     = Deno.env.get('SUPABASE_ANON_KEY')!;
 const VAPID_PUBLIC_KEY      = Deno.env.get('VAPID_PUBLIC_KEY')!;
 const VAPID_PRIVATE_KEY     = Deno.env.get('VAPID_PRIVATE_KEY')!;
 const VAPID_SUBJECT         = Deno.env.get('VAPID_SUBJECT')!;
@@ -20,43 +21,88 @@ const CORS = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers: CORS });
 
-  // Verificar autenticación
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) return err(401, 'No autorizado');
 
-  const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    headers: { 'Authorization': authHeader, 'apikey': Deno.env.get('SUPABASE_ANON_KEY')! },
+  // Verificar JWT y obtener usuario
+  const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { 'Authorization': authHeader, 'apikey': SUPABASE_ANON_KEY },
   });
-  if (!authRes.ok) return err(401, 'No autorizado');
+  if (!userRes.ok) return err(401, 'No autorizado');
+  const user = await userRes.json();
 
-  // Datos del body
-  const { pressed_by } = await req.json().catch(() => ({}));
-  if (!pressed_by) return err(400, 'Falta pressed_by');
+  const { button_id, pressed_by } = await req.json().catch(() => ({}));
+  if (!button_id) return err(400, 'Falta button_id');
 
-  // Hora formateada en Chile
+  // Obtener botón
+  const { data: button, error: btnErr } = await db
+    .from('buttons')
+    .select('*')
+    .eq('id', button_id)
+    .eq('is_active', true)
+    .single();
+
+  if (btnErr || !button) return err(404, 'Botón no encontrado o inactivo');
+
+  // Verificar press_policy
+  if (button.press_policy === 'owner_only' && button.owner_id !== user.id) {
+    return err(403, 'Solo el dueño puede presionar este botón');
+  }
+  if (button.press_policy === 'subscribers') {
+    const { data: sub } = await db
+      .from('subscriptions')
+      .select('id')
+      .eq('button_id', button_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!sub) return err(403, 'Solo suscriptores pueden presionar este botón');
+  }
+
+  // Rate limit: contar presiones en la ventana temporal
+  const windowStart = new Date(Date.now() - button.rate_limit_seconds * 1000).toISOString();
+  const { count } = await db
+    .from('press_log')
+    .select('id', { count: 'exact', head: true })
+    .eq('button_id', button_id)
+    .gte('pressed_at', windowStart);
+
+  if ((count ?? 0) >= button.rate_limit_max_presses) {
+    return err(429, `Límite alcanzado: máx ${button.rate_limit_max_presses} presiones cada ${button.rate_limit_seconds}s`);
+  }
+
+  // Registrar presión
+  await db.from('press_log').insert({
+    button_id,
+    pressed_by: user.id,
+    remote_ip: req.headers.get('x-forwarded-for') ?? null,
+  });
+  await db.from('buttons').update({ last_pressed_at: new Date().toISOString() }).eq('id', button_id);
+
+  // Obtener suscriptores del botón
+  const { data: subs, error: subsErr } = await db
+    .from('subscriptions')
+    .select('id, endpoint, p256dh, auth_token')
+    .eq('button_id', button_id);
+
+  if (subsErr) return err(500, subsErr.message);
+  if (!subs || subs.length === 0) return ok({ sent: 0, message: 'Sin suscriptores' });
+
   const hora = new Intl.DateTimeFormat('es-CL', {
     timeZone: 'America/Santiago',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour: '2-digit', minute: '2-digit',
   }).format(new Date());
 
+  const displayName = pressed_by || user.email || 'Alguien';
   const payload = JSON.stringify({
     notification: {
-      title: '🔔 Botón presionado',
-      body:  `${pressed_by} presionó el botón a las ${hora}`,
+      title: `🔔 ${button.name}`,
+      body:  `${displayName} presionó el botón a las ${hora}`,
       icon:  '/icons/icon-192x192.png',
       badge: '/icons/icon-96x96.png',
+      data:  { url: `/button/${button.slug}` },
     },
   });
 
-  // Obtener todos los suscritos
-  const { data: subs, error: dbErr } = await db
-    .from('subscriptions')
-    .select('id, endpoint, p256dh, auth_token');
-
-  if (dbErr) return err(500, dbErr.message);
-  if (!subs || subs.length === 0) return ok({ sent: 0, message: 'Sin suscriptores' });
-
-  // Enviar a todos
   let sent = 0;
   const staleIds: string[] = [];
 
@@ -73,12 +119,11 @@ Deno.serve(async (req) => {
     }
   }));
 
-  // Limpiar endpoints muertos
   if (staleIds.length > 0) {
     await db.from('subscriptions').delete().in('id', staleIds);
   }
 
-  console.log(`send-push: total=${subs.length} sent=${sent} stale=${staleIds.length}`);
+  console.log(`send-push [${button.slug}]: total=${subs.length} sent=${sent} stale=${staleIds.length}`);
   return ok({ sent, total: subs.length });
 });
 
