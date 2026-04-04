@@ -47,6 +47,11 @@ create policy "subscriptions: insertar propio"
   on subscriptions for insert
   with check (user_id = auth.uid());
 
+create policy "subscriptions: actualizar propio"
+  on subscriptions for update
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
 create policy "subscriptions: eliminar propio"
   on subscriptions for delete
   using (user_id = auth.uid());
