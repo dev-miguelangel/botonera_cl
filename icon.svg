@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="110" fill="#E0F0FB"/>
+
+  <!-- Bell shadow (subtle) -->
+  <path d="M256 388 C238 388 224 374 224 356 L288 356 C288 374 274 388 256 388 Z
+           M155 344 C148 344 144 337 148 331 L172 296 L172 220
+           C172 163 209 116 256 108 C303 116 340 163 340 220
+           L340 296 L364 331 C368 337 364 344 357 344 Z"
+        fill="#1E6FA8" opacity="0.12" transform="translate(6,8)"/>
+
+  <!-- Bell body -->
+  <path d="M256 388 C238 388 224 374 224 356 L288 356 C288 374 274 388 256 388 Z
+           M155 344 C148 344 144 337 148 331 L172 296 L172 220
+           C172 163 209 116 256 108 C303 116 340 163 340 220
+           L340 296 L364 331 C368 337 364 344 357 344 Z"
+        fill="#2B7EC3"/>
+
+  <!-- Bell highlight (top gloss) -->
+  <ellipse cx="222" cy="168" rx="28" ry="16" fill="white" opacity="0.22" transform="rotate(-30 222 168)"/>
+
+  <!-- Bell handle / hanger -->
+  <rect x="240" y="80" width="32" height="36" rx="16" fill="#2B7EC3"/>
+
+  <!-- Green notification dot -->
+  <circle cx="352" cy="158" r="62" fill="#4CAF7A"/>
+  <!-- White checkmark inside green dot -->
+  <polyline points="328,158 346,176 382,138"
+            fill="none" stroke="white" stroke-width="13"
+            stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
