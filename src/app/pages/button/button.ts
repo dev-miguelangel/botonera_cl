@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth';
 import { ButtonService, Button } from '../../core/button.service';
 import { PushService } from '../../core/push';
+import { COLORS } from '../create/create';
 
 type Tab = 'suscritos' | 'historial' | 'compartir';
 
@@ -48,6 +49,11 @@ export class ButtonPage implements OnInit, OnDestroy {
   userName = computed(() => {
     const u = this.auth.user();
     return u?.user_metadata?.['full_name'] ?? u?.email ?? 'Usuario';
+  });
+
+  buttonColor = computed(() => {
+    const c = this.button()?.color ?? 'indigo';
+    return COLORS.find(x => x.value === c) ?? COLORS[0];
   });
 
   canPress = computed(() => {

@@ -42,16 +42,15 @@
         <button
           (click)="presionar()"
           [disabled]="!canPress() || pushStatus() === 'sending'"
-          class="w-36 h-36 rounded-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white shadow-2xl shadow-indigo-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center gap-1">
+          class="w-36 h-36 rounded-full active:scale-95 text-white shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center gap-1"
+          [class]="buttonColor().bg + ' ' + buttonColor().shadow">
           @if (pushStatus() === 'sending') {
             <svg class="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
             </svg>
           } @else {
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-            </svg>
+            <span class="material-symbols-outlined" style="font-size: 36px; font-variation-settings: 'FILL' 1">{{ button()!.icon || 'notifications' }}</span>
             <span class="text-sm font-bold">Presionar</span>
           }
         </button>

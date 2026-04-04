@@ -7,6 +7,8 @@ export interface Button {
   name: string;
   description: string | null;
   slug: string;
+  icon: string;
+  color: string;
   press_policy: 'owner_only' | 'subscribers' | 'anyone_with_link';
   rate_limit_seconds: number;
   rate_limit_max_presses: number;
@@ -19,6 +21,8 @@ export interface CreateButtonDto {
   name: string;
   description?: string;
   slug: string;
+  icon?: string;
+  color?: string;
   press_policy: Button['press_policy'];
   rate_limit_seconds?: number;
   rate_limit_max_presses?: number;

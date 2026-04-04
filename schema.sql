@@ -66,6 +66,8 @@ create table buttons (
   slug                  text not null unique,
   press_policy          text not null default 'anyone_with_link'
                           check (press_policy in ('owner_only', 'subscribers', 'anyone_with_link')),
+  icon                  text not null default 'notifications',
+  color                 text not null default 'indigo',
   rate_limit_seconds    int not null default 60,
   rate_limit_max_presses int not null default 10,
   is_active             boolean not null default true,
