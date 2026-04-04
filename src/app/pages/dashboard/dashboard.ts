@@ -1,4 +1,5 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
+import { AuthService } from '../../core/auth';
 
 @Component({
   selector: 'app-dashboard',
@@ -6,7 +7,25 @@ import { Component, signal } from '@angular/core';
   templateUrl: './dashboard.html',
 })
 export class Dashboard {
+  private auth = inject(AuthService);
+
   sidebarOpen = signal(false);
+
+  userName = computed(() => {
+    const user = this.auth.user();
+    return user?.user_metadata?.['full_name'] ?? user?.email ?? 'Usuario';
+  });
+
+  userAvatar = computed(() => this.auth.user()?.user_metadata?.['avatar_url'] ?? null);
+
+  userInitials = computed(() => {
+    const name = this.userName();
+    return name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase();
+  });
+
+  logout() {
+    this.auth.logout();
+  }
 
   botones = [
     { icon: '🔔', nombre: 'Apoyo técnico', desc: 'Solicitar soporte de TI', suscritos: 12, color: 'bg-indigo-50', badge: 'text-indigo-600 bg-indigo-100' },
