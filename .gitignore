@@ -3,6 +3,10 @@
 # Environment files with credentials
 src/environments/environment.development.ts
 
+# Supabase temp files
+supabase/.temp/
+secrets.txt
+
 # Compiled output
 /dist
 /tmp
