@@ -218,6 +218,14 @@
 
 </div>
 
+<!-- TOAST PRIMER PLANO -->
+@if (foregroundMsg()) {
+  <div class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 max-w-sm w-full mx-4">
+    <span class="text-lg">🔔</span>
+    <span>{{ foregroundMsg() }}</span>
+  </div>
+}
+
 <!-- MODAL SUSCRITOS -->
 @if (showModal()) {
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4">

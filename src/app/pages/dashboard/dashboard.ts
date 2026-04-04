@@ -1,5 +1,6 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth';
 import { PushService } from '../../core/push';
 
@@ -8,9 +9,10 @@ import { PushService } from '../../core/push';
   imports: [DatePipe],
   templateUrl: './dashboard.html',
 })
-export class Dashboard implements OnInit {
+export class Dashboard implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   readonly push = inject(PushService);
+  private msgSub?: Subscription;
 
   sidebarOpen   = signal(false);
   showModal     = signal(false);
@@ -18,6 +20,7 @@ export class Dashboard implements OnInit {
   pushStatus    = signal<'idle' | 'sending' | 'sent' | 'error'>('idle');
   pushMsg       = signal('');
   subStatus     = signal<'loading' | 'subscribed' | 'already' | 'disabled' | 'error'>('loading');
+  foregroundMsg = signal<string | null>(null);
 
   userName = computed(() => {
     const user = this.auth.user();
@@ -32,6 +35,17 @@ export class Dashboard implements OnInit {
   async ngOnInit() {
     const result = await this.push.autoSubscribe();
     this.subStatus.set(result);
+
+    // Toast cuando la app está en primer plano
+    this.msgSub = this.push.swPush.messages.subscribe((msg: any) => {
+      const body = msg?.notification?.body ?? msg?.body ?? 'Notificación recibida';
+      this.foregroundMsg.set(body);
+      setTimeout(() => this.foregroundMsg.set(null), 5000);
+    });
+  }
+
+  ngOnDestroy() {
+    this.msgSub?.unsubscribe();
   }
 
   async presionar() {
