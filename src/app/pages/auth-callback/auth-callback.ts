@@ -18,23 +18,24 @@ export class AuthCallback implements OnInit {
   private router   = inject(Router);
 
   async ngOnInit() {
-    // Si ya hay sesión (ej. recarga), ir directo
+    // Con implicit flow, Supabase parsea #access_token del hash sincrónicamente
+    // al inicializar el cliente, así que getSession() ya tiene la sesión.
     const { data } = await this.supabase.auth.getSession();
+
     if (data.session) {
       this.router.navigate(['/dashboard']);
       return;
     }
 
-    // Esperar que Supabase intercambie el código PKCE del URL (?code=...)
-    // y dispare SIGNED_IN. Timeout de 15s como fallback.
-    const timeout = setTimeout(() => {
+    // Fallback: esperar SIGNED_IN si el parsing fue async (ej. token refresh)
+    const fallback = setTimeout(() => {
       sub.unsubscribe();
       this.router.navigate(['/login']);
-    }, 15000);
+    }, 8000);
 
     const { data: { subscription: sub } } = this.supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        clearTimeout(timeout);
+        clearTimeout(fallback);
         sub.unsubscribe();
         this.router.navigate(['/dashboard']);
       }
