@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
 import { environment } from '../../environments/environment';
@@ -18,7 +18,14 @@ export class PushService {
     if (!this.swPush.isEnabled) return 'disabled';
 
     try {
-      const existing = await firstValueFrom(this.swPush.subscription);
+      // Timeout de 5s por si el SW todavía no terminó de registrarse
+      const existing = await firstValueFrom(
+        this.swPush.subscription.pipe(
+          timeout(5000),
+          catchError(() => of(null))
+        )
+      );
+
       if (existing) {
         await this.saveToDb(existing);
         return 'already';
