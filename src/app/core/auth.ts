@@ -19,15 +19,18 @@ export class AuthService {
     });
 
     // Escuchar cambios de auth
-    this.supabase.auth.onAuthStateChange((_, session) => {
+    // Solo navegar en eventos explícitos — INITIAL_SESSION puede llegar con null
+    // mientras el intercambio PKCE todavía no terminó (Android/iOS PWA)
+    this.supabase.auth.onAuthStateChange((event, session) => {
       this.session.set(session);
       this.user.set(session?.user ?? null);
 
-      if (session) {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         this.router.navigate(['/dashboard']);
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         this.router.navigate(['/login']);
       }
+      // INITIAL_SESSION: no navegar, la ruta actual y el guard lo manejan
     });
   }
 

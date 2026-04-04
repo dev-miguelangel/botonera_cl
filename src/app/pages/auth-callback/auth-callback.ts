@@ -18,18 +18,26 @@ export class AuthCallback implements OnInit {
   private router   = inject(Router);
 
   async ngOnInit() {
-    // Supabase auto-exchanges the PKCE code from the URL on client init.
-    // Wait briefly then check session; onAuthStateChange in AuthService also
-    // handles the navigation, but this is a fallback.
+    // Si ya hay sesión (ej. recarga), ir directo
     const { data } = await this.supabase.auth.getSession();
     if (data.session) {
       this.router.navigate(['/dashboard']);
-    } else {
-      // Give onAuthStateChange a moment to fire
-      setTimeout(async () => {
-        const { data: d2 } = await this.supabase.auth.getSession();
-        this.router.navigate([d2.session ? '/dashboard' : '/login']);
-      }, 1500);
+      return;
     }
+
+    // Esperar que Supabase intercambie el código PKCE del URL (?code=...)
+    // y dispare SIGNED_IN. Timeout de 15s como fallback.
+    const timeout = setTimeout(() => {
+      sub.unsubscribe();
+      this.router.navigate(['/login']);
+    }, 15000);
+
+    const { data: { subscription: sub } } = this.supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        clearTimeout(timeout);
+        sub.unsubscribe();
+        this.router.navigate(['/dashboard']);
+      }
+    });
   }
 }
