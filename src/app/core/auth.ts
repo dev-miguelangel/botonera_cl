@@ -34,7 +34,7 @@ export class AuthService {
   async loginWithGoogle(): Promise<void> {
     await this.supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
   }
 
