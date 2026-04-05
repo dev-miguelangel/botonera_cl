@@ -51,13 +51,26 @@ export class ButtonService {
   async getSubscribedButtons(): Promise<Button[]> {
     const userId = await this.getUserId();
     if (!userId) return [];
-    const { data } = await this.supabase
+
+    const { data: subs, error: subsError } = await this.supabase
       .from('subscriptions')
-      .select('button_id, buttons(*)')
+      .select('button_id')
       .eq('user_id', userId);
-    return (data ?? [])
-      .map((s: any) => s.buttons)
-      .filter((b: Button | null) => b && b.owner_id !== userId) as Button[];
+
+    if (subsError) { console.error('getSubscribedButtons subs error:', subsError); return []; }
+    if (!subs || subs.length === 0) return [];
+
+    const ids = [...new Set(subs.map((s: any) => s.button_id as string))];
+
+    const { data: buttons, error: btnsError } = await this.supabase
+      .from('buttons')
+      .select('*')
+      .in('id', ids)
+      .eq('is_active', true)
+      .neq('owner_id', userId);
+
+    if (btnsError) { console.error('getSubscribedButtons buttons error:', btnsError); return []; }
+    return buttons ?? [];
   }
 
   async getBySlug(slug: string): Promise<Button | null> {
