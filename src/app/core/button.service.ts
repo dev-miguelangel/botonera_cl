@@ -84,8 +84,17 @@ export class ButtonService {
   }
 
   async create(dto: CreateButtonDto): Promise<Button> {
-    const userId = await this.getUserId();
+    const { data: { session } } = await this.supabase.auth.getSession();
+    const userId = session?.user?.id ?? null;
     if (!userId) throw new Error('Sin sesión');
+
+    // Garantizar que el perfil existe antes de insertar (FK buttons -> profiles)
+    await this.supabase.from('profiles').upsert({
+      id:           userId,
+      display_name: session!.user.user_metadata?.['full_name'] ?? session!.user.email ?? '',
+      avatar_url:   session!.user.user_metadata?.['avatar_url'] ?? null,
+    }, { onConflict: 'id' });
+
     const { data, error } = await this.supabase
       .from('buttons')
       .insert({ ...dto, owner_id: userId })
