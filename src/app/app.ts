@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
-import { filter } from 'rxjs';
+import { filter, take } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -38,12 +38,15 @@ export class App implements OnInit {
     window.matchMedia('(display-mode: standalone)').matches;
 
   ngOnInit() {
-    // Si la PWA abre en standalone, retomar navegación pendiente guardada desde Safari
+    // Si la PWA abre en standalone, retomar navegación pendiente guardada desde Safari.
+    // Esperar al primer NavigationEnd para no pisar la navegación inicial del router.
     if (this.isStandalone) {
       const pending = localStorage.getItem('pendingNav');
       if (pending) {
         localStorage.removeItem('pendingNav');
-        this.router.navigateByUrl(pending);
+        this.router.events
+          .pipe(filter(e => e instanceof NavigationEnd), take(1))
+          .subscribe(() => this.router.navigateByUrl(pending));
       }
     }
 
