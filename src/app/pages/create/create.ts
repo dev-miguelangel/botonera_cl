@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonService } from '../../core/button.service';
+import { AuthService } from '../../core/auth';
 
 export interface IconOption {
   value: string;
@@ -64,6 +65,13 @@ export const COLORS: ColorOption[] = [
 export class Create {
   private buttons = inject(ButtonService);
   private router  = inject(Router);
+  private auth    = inject(AuthService);
+
+  get slugPreview(): string {
+    const userId = this.auth.user()?.id;
+    if (!userId || !this.slug) return this.slug;
+    return `${this.slug}-${userId.slice(0, 6)}`;
+  }
 
   readonly icons  = ICONS;
   readonly colors = COLORS;

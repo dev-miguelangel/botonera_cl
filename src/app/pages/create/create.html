@@ -44,13 +44,18 @@
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1.5">URL del botón *</label>
           <div class="flex items-center gap-0 rounded-xl border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500">
-            <span class="px-3 py-3 bg-gray-50 text-gray-400 text-xs border-r border-gray-200 whitespace-nowrap">botoneracl.vercel.app/button/</span>
+            <span class="px-3 py-3 bg-gray-50 text-gray-400 text-xs border-r border-gray-200 whitespace-nowrap">botonera/</span>
             <input
               type="text"
               [(ngModel)]="slug"
               placeholder="mi-boton"
               class="flex-1 px-3 py-3 text-sm focus:outline-none" />
           </div>
+          @if (slugPreview) {
+            <p class="mt-1.5 text-xs text-gray-400 truncate">
+              URL final: <span class="font-mono text-gray-600">…/button/{{ slugPreview }}</span>
+            </p>
+          }
         </div>
 
         <!-- Icono y Color (previsualización + selectores) -->

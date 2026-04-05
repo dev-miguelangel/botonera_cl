@@ -95,9 +95,12 @@ export class ButtonService {
       avatar_url:   session!.user.user_metadata?.['avatar_url'] ?? null,
     }, { onConflict: 'id' });
 
+    // Sufijo del userId para garantizar unicidad de slug entre usuarios
+    const slugFinal = `${dto.slug}-${userId.slice(0, 6)}`;
+
     const { data, error } = await this.supabase
       .from('buttons')
-      .insert({ ...dto, owner_id: userId })
+      .insert({ ...dto, slug: slugFinal, owner_id: userId })
       .select()
       .single();
     if (error) throw new Error(error.message);

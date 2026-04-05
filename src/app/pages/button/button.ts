@@ -41,11 +41,15 @@ export class ButtonPage implements OnInit, OnDestroy {
 
   foregroundMsg = signal<string | null>(null);
 
-  readonly origin       = window.location.origin;
-  readonly isIos        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-  readonly isStandalone = ('standalone' in navigator && !!(navigator as any).standalone)
-                       || window.matchMedia('(display-mode: standalone)').matches;
+  readonly origin        = window.location.origin;
+  readonly isIos         = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  readonly isStandalone  = ('standalone' in navigator && !!(navigator as any).standalone)
+                        || window.matchMedia('(display-mode: standalone)').matches;
+  readonly isMobile      = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent);
   readonly showOpenInApp = this.isIos && !this.isStandalone;
+  readonly requiresPwa   = this.isMobile && !this.isStandalone;
+
+  subMsg = signal('');
 
   userName = computed(() => {
     const u = this.auth.user();
@@ -134,9 +138,16 @@ export class ButtonPage implements OnInit, OnDestroy {
         const result = await this.push.subscribe(this.button()!.id);
         if (result === 'subscribed' || result === 'already') {
           this.subscribed.set(true);
+          this.subMsg.set('');
           if (this.isOwner()) {
             this.subscribers.set(await this.btnSvc.getSubscribers(this.button()!.id));
           }
+        } else if (result === 'disabled') {
+          this.subMsg.set(this.isIos
+            ? 'En iPhone, instala la app para recibir notificaciones: Safari → Compartir ⎙ → Añadir a pantalla de inicio'
+            : 'Tu navegador no soporta notificaciones push. Prueba instalando la app.');
+        } else {
+          this.subMsg.set('No se pudo suscribir. Inténtalo de nuevo.');
         }
       }
     } finally {
