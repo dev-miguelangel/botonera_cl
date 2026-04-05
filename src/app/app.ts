@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter } from 'rxjs';
 
@@ -29,10 +29,24 @@ import { filter } from 'rxjs';
   `,
 })
 export class App implements OnInit {
-  private swUpdate  = inject(SwUpdate);
-  updateReady       = signal(false);
+  private swUpdate = inject(SwUpdate);
+  private router   = inject(Router);
+  updateReady      = signal(false);
+
+  private readonly isStandalone =
+    ('standalone' in navigator && !!(navigator as any).standalone) ||
+    window.matchMedia('(display-mode: standalone)').matches;
 
   ngOnInit() {
+    // Si la PWA abre en standalone, retomar navegación pendiente guardada desde Safari
+    if (this.isStandalone) {
+      const pending = localStorage.getItem('pendingNav');
+      if (pending) {
+        localStorage.removeItem('pendingNav');
+        this.router.navigateByUrl(pending);
+      }
+    }
+
     if (!this.swUpdate.isEnabled) return;
 
     // Detectar nueva versión lista

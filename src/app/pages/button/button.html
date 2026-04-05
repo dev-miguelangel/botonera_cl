@@ -74,9 +74,13 @@
 
         <!-- Suscripción -->
         @if (isIos && !isStandalone) {
-          <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 text-center">
-            <strong>Instala la app</strong> en tu pantalla de inicio para activar notificaciones.<br>
-            Safari → Compartir (⎙) → Añadir a pantalla de inicio
+          <div class="w-full rounded-2xl bg-indigo-600 px-5 py-4 text-white text-center shadow-lg shadow-indigo-200">
+            <p class="font-extrabold text-base mb-0.5">Abre la app para continuar</p>
+            <p class="text-indigo-200 text-xs mb-3">Busca <strong class="text-white">Botonera</strong> en tu pantalla de inicio</p>
+            <div class="flex items-center justify-center gap-2 text-xs text-indigo-300">
+              <span>¿No la tienes?</span>
+              <span>Safari → Compartir ⎙ → Añadir a pantalla de inicio</span>
+            </div>
           </div>
         } @else {
           <button

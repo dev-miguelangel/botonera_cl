@@ -45,6 +45,7 @@ export class ButtonPage implements OnInit, OnDestroy {
   readonly isIos        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
   readonly isStandalone = ('standalone' in navigator && !!(navigator as any).standalone)
                        || window.matchMedia('(display-mode: standalone)').matches;
+  readonly showOpenInApp = this.isIos && !this.isStandalone;
 
   userName = computed(() => {
     const u = this.auth.user();
@@ -66,6 +67,12 @@ export class ButtonPage implements OnInit, OnDestroy {
 
   async ngOnInit() {
     const slug = this.route.snapshot.paramMap.get('slug')!;
+
+    // En iOS browser (no PWA): guardar pendingNav para que la app lo retome
+    if (this.showOpenInApp) {
+      localStorage.setItem('pendingNav', `/button/${slug}`);
+    }
+
     const btn = await this.btnSvc.getBySlug(slug);
 
     if (!btn) { this.notFound.set(true); this.loading.set(false); return; }
