@@ -26,7 +26,13 @@ export class AuthService {
       this.user.set(session?.user ?? null);
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        this.router.navigate(['/dashboard']);
+        const returnUrl = localStorage.getItem('returnUrl');
+        if (returnUrl) {
+          localStorage.removeItem('returnUrl');
+          this.router.navigate([returnUrl]);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       } else if (event === 'SIGNED_OUT') {
         this.router.navigate(['/login']);
       }

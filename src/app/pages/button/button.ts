@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth';
@@ -16,6 +16,7 @@ type Tab = 'suscritos' | 'historial' | 'compartir';
 })
 export class ButtonPage implements OnInit, OnDestroy {
   private route   = inject(ActivatedRoute);
+  private router  = inject(Router);
   private auth    = inject(AuthService);
   private btnSvc  = inject(ButtonService);
   readonly push   = inject(PushService);
@@ -146,6 +147,10 @@ export class ButtonPage implements OnInit, OnDestroy {
           this.subMsg.set(this.isIos
             ? 'En iPhone, instala la app para recibir notificaciones: Safari → Compartir ⎙ → Añadir a pantalla de inicio'
             : 'Tu navegador no soporta notificaciones push. Prueba instalando la app.');
+        } else if (result === 'not-authed') {
+          this.subMsg.set('Inicia sesión para suscribirte y recibir notificaciones.');
+          localStorage.setItem('returnUrl', `/button/${this.button()!.slug}`);
+          setTimeout(() => this.router.navigate(['/login']), 1500);
         } else {
           this.subMsg.set('No se pudo suscribir. Inténtalo de nuevo.');
         }

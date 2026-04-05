@@ -12,8 +12,18 @@ export class PushService {
   get isEnabled() { return this.swPush.isEnabled; }
 
   /** Suscribir al usuario a un botón específico */
-  async subscribe(buttonId: string): Promise<'subscribed' | 'already' | 'disabled' | 'error'> {
+  async subscribe(buttonId: string): Promise<'subscribed' | 'already' | 'disabled' | 'not-authed' | 'error'> {
     if (!this.swPush.isEnabled) return 'disabled';
+
+    // iOS Safari (no PWA) no soporta push subscriptions aunque SW esté habilitado
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isStandalone = ('standalone' in navigator && !!(navigator as any).standalone)
+                      || window.matchMedia('(display-mode: standalone)').matches;
+    if (isIos && !isStandalone) return 'disabled';
+
+    // Requiere sesión para guardar la suscripción en BD
+    const { data: { session } } = await this.supabase.auth.getSession();
+    if (!session) return 'not-authed';
 
     try {
       let sub = await firstValueFrom(this.swPush.subscription.pipe(timeout(5000), catchError(() => of(null))));
@@ -27,8 +37,9 @@ export class PushService {
       const already = await this.isSubscribed(buttonId);
       await this.saveToDb(buttonId, sub!);
       return already ? 'already' : 'subscribed';
-    } catch (e) {
+    } catch (e: any) {
       console.error('PushService.subscribe error:', e);
+      if (e?.name === 'NotAllowedError') return 'disabled';
       return 'error';
     }
   }
