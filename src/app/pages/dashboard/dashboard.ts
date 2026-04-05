@@ -3,10 +3,11 @@ import { Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { AuthService } from '../../core/auth';
 import { ButtonService, Button } from '../../core/button.service';
+import { OnboardingWizardComponent } from './onboarding-wizard';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, OnboardingWizardComponent],
   templateUrl: './dashboard.html',
 })
 export class Dashboard implements OnInit {
@@ -18,6 +19,7 @@ export class Dashboard implements OnInit {
   myButtons      = signal<Button[]>([]);
   subButtons     = signal<Button[]>([]);
   loading        = signal(true);
+  showWizard     = signal(false);
 
   userName = computed(() => {
     const u = this.auth.user();
@@ -37,6 +39,15 @@ export class Dashboard implements OnInit {
     this.myButtons.set(mine);
     this.subButtons.set(subscribed);
     this.loading.set(false);
+    if (mine.length === 0) this.showWizard.set(true);
+  }
+
+  onWizardCreated(btn: Button) {
+    this.myButtons.set([btn]);
+  }
+
+  onWizardDismissed() {
+    this.showWizard.set(false);
   }
 
   navigateTo(slug: string) {

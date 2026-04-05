@@ -115,7 +115,11 @@
         <!-- Mis botones -->
         <section class="mb-10">
           <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Mis botones</h2>
-          @if (myButtons().length === 0) {
+          @if (showWizard()) {
+            <app-onboarding-wizard
+              (created)="onWizardCreated($event)"
+              (dismissed)="onWizardDismissed()" />
+          } @else if (myButtons().length === 0) {
             <div class="bg-white border border-dashed border-gray-200 rounded-2xl p-10 text-center">
               <p class="text-gray-400 text-sm mb-3">Todavía no tienes botones</p>
               <a routerLink="/create"

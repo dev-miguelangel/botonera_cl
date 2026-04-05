@@ -118,6 +118,15 @@
             <option value="subscribers">Solo suscriptores</option>
             <option value="owner_only">Solo yo</option>
           </select>
+          <p class="mt-2 text-xs text-gray-400 leading-relaxed">
+            @if (policy === 'anyone_with_link') {
+              Cualquier persona con el link puede pulsar, sin registrarse.
+            } @else if (policy === 'subscribers') {
+              Quienes se unan con tu link pueden pulsar. Ideal para tu equipo o familia.
+            } @else if (policy === 'owner_only') {
+              Solo tú puedes pulsar. Ideal para recordatorios personales.
+            }
+          </p>
         </div>
 
         <!-- Error -->
