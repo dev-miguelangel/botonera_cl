@@ -48,9 +48,11 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
-    await this.supabase.auth.signOut();
+    try { await this.supabase.auth.signOut(); } catch {}
     localStorage.clear();
     sessionStorage.clear();
+    // Hard redirect para que iOS PWA arranque sin ninguna sesión cacheada
+    window.location.href = '/login';
   }
 
   isLoggedIn(): boolean {
