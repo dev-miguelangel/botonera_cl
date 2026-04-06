@@ -85,6 +85,7 @@ export class ButtonPage implements OnInit, OnDestroy {
   canPress = computed(() => {
     const btn = this.button();
     if (!btn) return false;
+    if (this.paused() && !this.isOwner()) return false;
     if (btn.press_policy === 'owner_only') return this.isOwner();
     if (btn.press_policy === 'subscribers') return this.following() || this.isOwner();
     return true; // anyone_with_link
