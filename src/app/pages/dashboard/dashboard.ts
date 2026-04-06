@@ -9,6 +9,7 @@ import { COLORS } from '../create/create';
 interface DashboardBtn extends Button {
   isOwn: boolean;
   followerCount: number;
+  isMuted: boolean;
 }
 
 @Component({
@@ -29,6 +30,7 @@ export class Dashboard implements OnInit {
   private myButtons      = signal<Button[]>([]);
   private subButtons     = signal<Button[]>([]);
   private followerCounts = signal<Record<string, number>>({});
+  private mutedIds       = signal<Set<string>>(new Set());
 
   pressingId  = signal<string | null>(null);
   pressResult = signal<{ id: string; msg: string; ok: boolean } | null>(null);
@@ -44,12 +46,13 @@ export class Dashboard implements OnInit {
   });
 
   allButtons = computed<DashboardBtn[]>(() => {
-    const counts = this.followerCounts();
+    const counts  = this.followerCounts();
+    const muted   = this.mutedIds();
     const own = this.myButtons()
-      .map(b => ({ ...b, isOwn: true,  followerCount: counts[b.id] ?? 0 }))
+      .map(b => ({ ...b, isOwn: true,  followerCount: counts[b.id] ?? 0, isMuted: false }))
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
     const sub = this.subButtons()
-      .map(b => ({ ...b, isOwn: false, followerCount: counts[b.id] ?? 0 }))
+      .map(b => ({ ...b, isOwn: false, followerCount: counts[b.id] ?? 0, isMuted: muted.has(b.id) }))
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
     return [...own, ...sub];
   });
@@ -65,12 +68,14 @@ export class Dashboard implements OnInit {
   }
 
   async ngOnInit() {
-    const [mine, subscribed] = await Promise.all([
+    const [mine, subscribed, mutedIds] = await Promise.all([
       this.btnSvc.getMyButtons(),
       this.btnSvc.getSubscribedButtons(),
+      this.push.getMutedButtonIds(),
     ]);
     this.myButtons.set(mine);
     this.subButtons.set(subscribed);
+    this.mutedIds.set(new Set(mutedIds));
 
     const allIds = [...mine, ...subscribed].map(b => b.id);
     if (allIds.length) {
