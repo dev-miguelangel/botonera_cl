@@ -52,15 +52,15 @@ export class ButtonService {
     const userId = await this.getUserId();
     if (!userId) return [];
 
-    const { data: subs, error: subsError } = await this.supabase
-      .from('subscriptions')
+    const { data: follows, error: followsError } = await this.supabase
+      .from('follows')
       .select('button_id')
       .eq('user_id', userId);
 
-    if (subsError) { console.error('getSubscribedButtons subs error:', subsError); return []; }
-    if (!subs || subs.length === 0) return [];
+    if (followsError) { console.error('getSubscribedButtons follows error:', followsError); return []; }
+    if (!follows || follows.length === 0) return [];
 
-    const ids = [...new Set(subs.map((s: any) => s.button_id as string))];
+    const ids = [...new Set(follows.map((f: any) => f.button_id as string))];
 
     const { data: buttons, error: btnsError } = await this.supabase
       .from('buttons')
@@ -113,7 +113,7 @@ export class ButtonService {
 
   async getSubscribers(buttonId: string) {
     const { data } = await this.supabase
-      .from('subscriptions')
+      .from('follows')
       .select('id, user_name, user_email, created_at')
       .eq('button_id', buttonId)
       .order('created_at', { ascending: false });

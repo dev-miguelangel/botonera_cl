@@ -27,8 +27,10 @@ export class ButtonPage implements OnInit, OnDestroy {
   notFound      = signal(false);
 
   isOwner       = signal(false);
-  subscribed    = signal(false);
+  following     = signal(false);   // está en follows (sin push)
+  pushEnabled   = signal(false);   // tiene push subscription activa
   subLoading    = signal(false);
+  pushLoading   = signal(false);
 
   pushStatus    = signal<'idle' | 'sending' | 'sent' | 'error'>('idle');
   pushMsg       = signal('');
@@ -41,6 +43,7 @@ export class ButtonPage implements OnInit, OnDestroy {
   copied        = signal(false);
 
   foregroundMsg = signal<string | null>(null);
+  subMsg        = signal('');
 
   readonly origin        = window.location.origin;
   readonly isIos         = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
@@ -66,7 +69,7 @@ export class ButtonPage implements OnInit, OnDestroy {
     const btn = this.button();
     if (!btn) return false;
     if (btn.press_policy === 'owner_only') return this.isOwner();
-    if (btn.press_policy === 'subscribers') return this.subscribed() || this.isOwner();
+    if (btn.press_policy === 'subscribers') return this.following() || this.isOwner();
     return true; // anyone_with_link
   });
 
@@ -86,9 +89,13 @@ export class ButtonPage implements OnInit, OnDestroy {
     const userId = this.auth.user()?.id;
     this.isOwner.set(btn.owner_id === userId);
 
-    // Check subscription status
-    const isSub = await this.push.isSubscribed(btn.id);
-    this.subscribed.set(isSub);
+    // Verificar follow y push de forma paralela
+    const [isFollowing, hasPush] = await Promise.all([
+      this.push.isFollowing(btn.id),
+      this.push.isSubscribed(btn.id),
+    ]);
+    this.following.set(isFollowing);
+    this.pushEnabled.set(hasPush);
 
     // Load owner data upfront
     if (this.isOwner()) {
@@ -128,35 +135,59 @@ export class ButtonPage implements OnInit, OnDestroy {
     setTimeout(() => this.pushStatus.set('idle'), 3000);
   }
 
-  async toggleSubscribe() {
+  async toggleFollow() {
     if (this.subLoading()) return;
+
+    if (!this.auth.user()) {
+      this.subMsg.set('Inicia sesión para seguir este botón.');
+      localStorage.setItem('returnUrl', `/button/${this.button()!.slug}`);
+      setTimeout(() => this.router.navigate(['/login']), 1500);
+      return;
+    }
+
     this.subLoading.set(true);
     try {
-      if (this.subscribed()) {
-        await this.push.unsubscribe(this.button()!.id);
-        this.subscribed.set(false);
+      if (this.following()) {
+        await this.push.unfollow(this.button()!.id);
+        this.following.set(false);
+        this.pushEnabled.set(false);
       } else {
-        const result = await this.push.subscribe(this.button()!.id);
-        if (result === 'subscribed' || result === 'already') {
-          this.subscribed.set(true);
+        const result = await this.push.follow(this.button()!.id);
+        if (result === 'followed' || result === 'already') {
+          this.following.set(true);
           this.subMsg.set('');
           if (this.isOwner()) {
             this.subscribers.set(await this.btnSvc.getSubscribers(this.button()!.id));
           }
-        } else if (result === 'disabled') {
-          this.subMsg.set(this.isIos
-            ? 'En iPhone, instala la app para recibir notificaciones: Safari → Compartir ⎙ → Añadir a pantalla de inicio'
-            : 'Tu navegador no soporta notificaciones push. Prueba instalando la app.');
-        } else if (result === 'not-authed') {
-          this.subMsg.set('Inicia sesión para suscribirte y recibir notificaciones.');
-          localStorage.setItem('returnUrl', `/button/${this.button()!.slug}`);
-          setTimeout(() => this.router.navigate(['/login']), 1500);
-        } else {
-          this.subMsg.set('No se pudo suscribir. Inténtalo de nuevo.');
         }
       }
     } finally {
       this.subLoading.set(false);
+    }
+  }
+
+  async enablePush() {
+    if (this.pushLoading()) return;
+    this.pushLoading.set(true);
+    this.subMsg.set('');
+    try {
+      const result = await this.push.subscribe(this.button()!.id);
+      if (result === 'subscribed' || result === 'already') {
+        this.pushEnabled.set(true);
+        this.following.set(true);
+      } else if (result === 'disabled') {
+        this.subMsg.set(this.isIos
+          ? 'En iPhone las notificaciones requieren instalar la app: Safari → Compartir ⎙ → Añadir a pantalla de inicio'
+          : 'Tu navegador no permite notificaciones push. Prueba instalando la app.');
+      } else if (result === 'not-authed') {
+        this.subMsg.set('Inicia sesión para activar notificaciones.');
+        localStorage.setItem('returnUrl', `/button/${this.button()!.slug}`);
+        setTimeout(() => this.router.navigate(['/login']), 1500);
+      } else {
+        this.subMsg.set('No se pudieron activar las notificaciones. Inténtalo de nuevo.');
+      }
+    } finally {
+      this.pushLoading.set(false);
     }
   }
 

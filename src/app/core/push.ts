@@ -11,17 +11,70 @@ export class PushService {
 
   get isEnabled() { return this.swPush.isEnabled; }
 
-  /** Suscribir al usuario a un botón específico */
-  async subscribe(buttonId: string): Promise<'subscribed' | 'already' | 'disabled' | 'not-authed' | 'error'> {
-    if (!this.swPush.isEnabled) return 'disabled';
-
-    // iOS Safari (no PWA) no soporta push subscriptions aunque SW esté habilitado
+  private get isIosNonPwa(): boolean {
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isStandalone = ('standalone' in navigator && !!(navigator as any).standalone)
                       || window.matchMedia('(display-mode: standalone)').matches;
-    if (isIos && !isStandalone) return 'disabled';
+    return isIos && !isStandalone;
+  }
 
-    // Requiere sesión para guardar la suscripción en BD
+  // ── FOLLOWS (solo DB, sin push) ──────────────────────
+
+  async follow(buttonId: string): Promise<'followed' | 'already' | 'not-authed'> {
+    const { data: { session } } = await this.supabase.auth.getSession();
+    if (!session) return 'not-authed';
+
+    const user = session.user;
+    const { error } = await this.supabase.from('follows').upsert({
+      button_id:  buttonId,
+      user_id:    user.id,
+      user_name:  user.user_metadata?.['full_name'] ?? user.email ?? 'Anónimo',
+      user_email: user.email ?? '',
+    }, { onConflict: 'button_id,user_id', ignoreDuplicates: true });
+
+    if (error) { console.error('follow error:', error); return 'already'; }
+    return 'followed';
+  }
+
+  async unfollow(buttonId: string): Promise<void> {
+    const { data: { session } } = await this.supabase.auth.getSession();
+    if (!session) return;
+
+    await this.supabase.from('follows')
+      .delete()
+      .eq('button_id', buttonId)
+      .eq('user_id', session.user.id);
+
+    // Eliminar también la suscripción push si existe
+    const sub = await firstValueFrom(this.swPush.subscription.pipe(timeout(3000), catchError(() => of(null))));
+    if (sub) {
+      await this.supabase.from('subscriptions')
+        .delete()
+        .eq('button_id', buttonId)
+        .eq('endpoint', sub.endpoint);
+    }
+  }
+
+  async isFollowing(buttonId: string): Promise<boolean> {
+    const { data: { session } } = await this.supabase.auth.getSession();
+    if (!session) return false;
+
+    const { data } = await this.supabase
+      .from('follows')
+      .select('id')
+      .eq('button_id', buttonId)
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+    return !!data;
+  }
+
+  // ── PUSH NOTIFICATIONS ───────────────────────────────
+
+  /** Activar notificaciones push para un botón (requiere SW activo) */
+  async subscribe(buttonId: string): Promise<'subscribed' | 'already' | 'disabled' | 'not-authed' | 'error'> {
+    if (!this.swPush.isEnabled) return 'disabled';
+    if (this.isIosNonPwa) return 'disabled';
+
     const { data: { session } } = await this.supabase.auth.getSession();
     if (!session) return 'not-authed';
 
@@ -35,25 +88,15 @@ export class PushService {
       }
 
       const already = await this.isSubscribed(buttonId);
-      await this.saveToDb(buttonId, sub!);
+      await this.savePushToDb(buttonId, sub!, session.user);
+      // También asegurar que existe el follow
+      await this.follow(buttonId);
       return already ? 'already' : 'subscribed';
     } catch (e: any) {
       console.error('PushService.subscribe error:', e);
       if (e?.name === 'NotAllowedError') return 'disabled';
       return 'error';
     }
-  }
-
-  /** Desuscribir del botón (elimina solo la fila de DB, no la suscripción del browser) */
-  async unsubscribe(buttonId: string): Promise<void> {
-    const sub = await firstValueFrom(this.swPush.subscription.pipe(timeout(5000), catchError(() => of(null))));
-    if (!sub) return;
-
-    await this.supabase
-      .from('subscriptions')
-      .delete()
-      .eq('button_id', buttonId)
-      .eq('endpoint', sub.endpoint);
   }
 
   async isSubscribed(buttonId: string): Promise<boolean> {
@@ -69,11 +112,7 @@ export class PushService {
     return !!data;
   }
 
-  private async saveToDb(buttonId: string, sub: PushSubscription): Promise<void> {
-    const { data: { session } } = await this.supabase.auth.getSession();
-    const user = session?.user;
-    if (!user) return;
-
+  private async savePushToDb(buttonId: string, sub: PushSubscription, user: any): Promise<void> {
     const keys = sub.toJSON().keys ?? {};
     const { error } = await this.supabase.from('subscriptions').upsert({
       button_id:  buttonId,
@@ -85,7 +124,7 @@ export class PushService {
       auth_token: keys['auth'],
     }, { onConflict: 'button_id,endpoint' });
 
-    if (error) console.error('PushService.saveToDb error:', error);
+    if (error) console.error('PushService.savePushToDb error:', error);
   }
 
   async sendPush(buttonId: string, pressedBy: string): Promise<{ sent: number }> {
