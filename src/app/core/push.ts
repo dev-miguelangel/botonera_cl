@@ -127,38 +127,6 @@ export class PushService {
     if (error) console.error('PushService.savePushToDb error:', error);
   }
 
-  async toggleMute(buttonId: string, mute: boolean): Promise<void> {
-    const { data: { session } } = await this.supabase.auth.getSession();
-    if (!session) return;
-    await this.supabase.from('follows')
-      .update({ is_muted: mute })
-      .eq('button_id', buttonId)
-      .eq('user_id', session.user.id);
-  }
-
-  async isMuted(buttonId: string): Promise<boolean> {
-    const { data: { session } } = await this.supabase.auth.getSession();
-    if (!session) return false;
-    const { data } = await this.supabase
-      .from('follows')
-      .select('is_muted')
-      .eq('button_id', buttonId)
-      .eq('user_id', session.user.id)
-      .maybeSingle();
-    return data?.is_muted ?? false;
-  }
-
-  async getMutedButtonIds(): Promise<string[]> {
-    const { data: { session } } = await this.supabase.auth.getSession();
-    if (!session) return [];
-    const { data } = await this.supabase
-      .from('follows')
-      .select('button_id')
-      .eq('user_id', session.user.id)
-      .eq('is_muted', true);
-    return data?.map((f: any) => f.button_id) ?? [];
-  }
-
   async sendPush(buttonId: string, pressedBy: string): Promise<{ sent: number }> {
     const { data: { session } } = await this.supabase.auth.getSession();
     if (!session) throw new Error('Sin sesión');
@@ -170,11 +138,11 @@ export class PushService {
         headers: {
           'Content-Type':  'application/json',
           'Authorization': `Bearer ${session.access_token}`,
-          'ngsw-bypass':   'true',
         },
         body: JSON.stringify({ button_id: buttonId, pressed_by: pressedBy }),
       }
     );
+
     const json = await res.json();
     if (!res.ok) throw new Error(json.error ?? 'Error al enviar');
     return json;

@@ -38,11 +38,6 @@ export class ButtonPage implements OnInit, OnDestroy {
   pushStatus    = signal<'idle' | 'sending' | 'sent' | 'error'>('idle');
   pushMsg       = signal('');
 
-  paused        = signal(false);   // dueño: botón pausado globalmente
-  muted         = signal(false);   // suscriptor: silenciado personalmente
-  pauseLoading  = signal(false);
-  muteLoading   = signal(false);
-
   activeTab     = signal<Tab>('suscritos');
   subscribers   = signal<any[]>([]);
   pressLog      = signal<any[]>([]);
@@ -77,8 +72,6 @@ export class ButtonPage implements OnInit, OnDestroy {
     const c = this.button()?.color ?? 'indigo';
     return COLORS.find(x => x.value === c) ?? COLORS[0];
   });
-
-  mutedCount = computed(() => this.subscribers().filter((s: any) => s.is_muted).length);
 
   canPress = computed(() => {
     const btn = this.button();
@@ -116,20 +109,17 @@ export class ButtonPage implements OnInit, OnDestroy {
     this.button.set(btn);
     const userId = this.auth.user()?.id;
     this.isOwner.set(btn.owner_id === userId);
-    this.paused.set(btn.is_paused);
 
     // Ícono dinámico para "Añadir a pantalla de inicio"
     this.injectTouchIcon(btn.slug);
 
-    // Verificar follow, push y mute de forma paralela
-    const [isFollowing, hasPush, isMuted] = await Promise.all([
+    // Verificar follow y push de forma paralela
+    const [isFollowing, hasPush] = await Promise.all([
       this.push.isFollowing(btn.id),
       this.push.isSubscribed(btn.id),
-      this.push.isMuted(btn.id),
     ]);
     this.following.set(isFollowing);
     this.pushEnabled.set(hasPush);
-    this.muted.set(isMuted);
 
     // Load owner data upfront
     if (this.isOwner()) {
@@ -167,31 +157,6 @@ export class ButtonPage implements OnInit, OnDestroy {
     link.href = href;
     this.document.head.appendChild(link);
     this.touchIconEl = link;
-  }
-
-  async togglePause() {
-    if (this.pauseLoading()) return;
-    this.pauseLoading.set(true);
-    const next = !this.paused();
-    try {
-      await this.btnSvc.setPaused(this.button()!.id, next);
-      this.paused.set(next);
-      this.button.set({ ...this.button()!, is_paused: next });
-    } finally {
-      this.pauseLoading.set(false);
-    }
-  }
-
-  async toggleMute() {
-    if (this.muteLoading()) return;
-    this.muteLoading.set(true);
-    const next = !this.muted();
-    try {
-      await this.push.toggleMute(this.button()!.id, next);
-      this.muted.set(next);
-    } finally {
-      this.muteLoading.set(false);
-    }
   }
 
   async triggerInstall() {

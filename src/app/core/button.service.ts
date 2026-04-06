@@ -13,7 +13,6 @@ export interface Button {
   rate_limit_seconds: number;
   rate_limit_max_presses: number;
   is_active: boolean;
-  is_paused: boolean;
   last_pressed_at: string | null;
   created_at: string;
 }
@@ -112,10 +111,6 @@ export class ButtonService {
     await this.supabase.from('buttons').delete().eq('id', id);
   }
 
-  async setPaused(id: string, paused: boolean): Promise<void> {
-    await this.supabase.from('buttons').update({ is_paused: paused }).eq('id', id);
-  }
-
   async getFollowerCounts(buttonIds: string[]): Promise<Record<string, number>> {
     if (!buttonIds.length) return {};
     const { data } = await this.supabase
@@ -132,7 +127,7 @@ export class ButtonService {
   async getSubscribers(buttonId: string) {
     const { data } = await this.supabase
       .from('follows')
-      .select('id, user_name, user_email, created_at, is_muted')
+      .select('id, user_name, user_email, created_at')
       .eq('button_id', buttonId)
       .order('created_at', { ascending: false });
     return data ?? [];
