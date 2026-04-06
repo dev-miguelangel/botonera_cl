@@ -53,8 +53,6 @@ export class ButtonPage implements OnInit, OnDestroy {
   readonly showOpenInApp = this.isIos && !this.isStandalone;
   readonly requiresPwa   = this.isMobile && !this.isStandalone;
 
-  subMsg = signal('');
-
   userName = computed(() => {
     const u = this.auth.user();
     return u?.user_metadata?.['full_name'] ?? u?.email ?? 'Usuario';
