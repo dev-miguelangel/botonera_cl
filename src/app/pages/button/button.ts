@@ -55,7 +55,8 @@ export class ButtonPage implements OnInit, OnDestroy {
   foregroundMsg = signal<string | null>(null);
   subMsg        = signal('');
 
-  readonly origin        = window.location.origin;
+  readonly origin           = window.location.origin;
+  readonly encodeURIComponent = encodeURIComponent;
   readonly isIos         = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
   readonly isAndroid     = /Android/i.test(navigator.userAgent);
   readonly isStandalone  = ('standalone' in navigator && !!(navigator as any).standalone)
