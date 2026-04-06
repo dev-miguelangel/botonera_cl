@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, DOCUMENT } from '@angular/core';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
@@ -6,6 +6,7 @@ import { AuthService } from '../../core/auth';
 import { ButtonService, Button } from '../../core/button.service';
 import { PushService } from '../../core/push';
 import { COLORS } from '../create/create';
+import { environment } from '../../../environments/environment';
 
 type Tab = 'suscritos' | 'historial' | 'compartir';
 
@@ -15,12 +16,14 @@ type Tab = 'suscritos' | 'historial' | 'compartir';
   templateUrl: './button.html',
 })
 export class ButtonPage implements OnInit, OnDestroy {
-  private route   = inject(ActivatedRoute);
-  private router  = inject(Router);
-  private auth    = inject(AuthService);
-  private btnSvc  = inject(ButtonService);
-  readonly push   = inject(PushService);
+  private route    = inject(ActivatedRoute);
+  private router   = inject(Router);
+  private auth     = inject(AuthService);
+  private btnSvc   = inject(ButtonService);
+  private document = inject(DOCUMENT);
+  readonly push    = inject(PushService);
   private msgSub?: Subscription;
+  private touchIconEl?: HTMLLinkElement;
 
   button        = signal<Button | null>(null);
   loading       = signal(true);
@@ -87,6 +90,9 @@ export class ButtonPage implements OnInit, OnDestroy {
     const userId = this.auth.user()?.id;
     this.isOwner.set(btn.owner_id === userId);
 
+    // Ícono dinámico para "Añadir a pantalla de inicio"
+    this.injectTouchIcon(btn.slug);
+
     // Verificar follow y push de forma paralela
     const [isFollowing, hasPush] = await Promise.all([
       this.push.isFollowing(btn.id),
@@ -117,6 +123,18 @@ export class ButtonPage implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.msgSub?.unsubscribe();
+    this.touchIconEl?.remove();
+  }
+
+  private injectTouchIcon(slug: string) {
+    // Eliminar uno previo si existiera
+    this.touchIconEl?.remove();
+    const href = `${environment.supabaseUrl}/functions/v1/button-icon?slug=${slug}`;
+    const link = this.document.createElement('link');
+    link.rel  = 'apple-touch-icon';
+    link.href = href;
+    this.document.head.appendChild(link);
+    this.touchIconEl = link;
   }
 
   async presionar() {
