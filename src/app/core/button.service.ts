@@ -136,7 +136,7 @@ export class ButtonService {
   async getPressLog(buttonId: string) {
     const { data } = await this.supabase
       .from('press_log')
-      .select('id, pressed_at, profiles(display_name)')
+      .select('id, pressed_at, pressed_by')
       .eq('button_id', buttonId)
       .order('pressed_at', { ascending: false })
       .limit(20);

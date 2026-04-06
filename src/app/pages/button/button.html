@@ -209,9 +209,7 @@
               @for (entry of pressLog(); track entry.id) {
                 <div class="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50">
                   <div class="w-2 h-2 rounded-full bg-indigo-400 flex-shrink-0"></div>
-                  <p class="text-sm text-gray-700 flex-1">
-                    {{ entry.profiles?.display_name ?? 'Alguien' }}
-                  </p>
+                  <p class="text-sm text-gray-700 flex-1">Alguien</p>
                   <p class="text-xs text-gray-400">{{ entry.pressed_at | date:'dd/MM HH:mm' }}</p>
                 </div>
               }
