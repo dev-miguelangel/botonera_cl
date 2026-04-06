@@ -160,10 +160,23 @@ export class PushService {
   }
 
   async sendPush(buttonId: string, pressedBy: string): Promise<{ sent: number }> {
-    const { data, error } = await this.supabase.functions.invoke('send-push', {
-      body: { button_id: buttonId, pressed_by: pressedBy },
-    });
-    if (error) throw new Error((error as any).message ?? 'Error al enviar');
-    return data;
+    const { data: { session } } = await this.supabase.auth.getSession();
+    if (!session) throw new Error('Sin sesión');
+
+    const res = await fetch(
+      `${environment.supabaseUrl}/functions/v1/send-push`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'ngsw-bypass':   'true',
+        },
+        body: JSON.stringify({ button_id: buttonId, pressed_by: pressedBy }),
+      }
+    );
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'Error al enviar');
+    return json;
   }
 }
