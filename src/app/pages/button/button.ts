@@ -50,11 +50,18 @@ export class ButtonPage implements OnInit, OnDestroy {
 
   readonly origin        = window.location.origin;
   readonly isIos         = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  readonly isAndroid     = /Android/i.test(navigator.userAgent);
   readonly isStandalone  = ('standalone' in navigator && !!(navigator as any).standalone)
                         || window.matchMedia('(display-mode: standalone)').matches;
   readonly isMobile      = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent);
   readonly showOpenInApp = this.isIos && !this.isStandalone;
   readonly requiresPwa   = this.isMobile && !this.isStandalone;
+
+  showInstallModal = signal(false);
+  canNativeInstall = signal(false);
+  private deferredPrompt: any = null;
+  private installHandler?: (e: Event) => void;
+  private installedHandler?: () => void;
 
   userName = computed(() => {
     const u = this.auth.user();
@@ -76,6 +83,19 @@ export class ButtonPage implements OnInit, OnDestroy {
 
   async ngOnInit() {
     const slug = this.route.snapshot.paramMap.get('slug')!;
+
+    // Capturar evento de instalación nativa (Android Chrome)
+    this.installHandler = (e: Event) => {
+      e.preventDefault();
+      this.deferredPrompt = e;
+      this.canNativeInstall.set(true);
+    };
+    this.installedHandler = () => {
+      this.canNativeInstall.set(false);
+      this.showInstallModal.set(false);
+    };
+    window.addEventListener('beforeinstallprompt', this.installHandler);
+    window.addEventListener('appinstalled', this.installedHandler);
 
     // En iOS browser (no PWA): guardar pendingNav para que la app lo retome
     if (this.showOpenInApp) {
@@ -124,6 +144,8 @@ export class ButtonPage implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.msgSub?.unsubscribe();
     this.touchIconEl?.remove();
+    if (this.installHandler)   window.removeEventListener('beforeinstallprompt', this.installHandler);
+    if (this.installedHandler) window.removeEventListener('appinstalled', this.installedHandler);
   }
 
   private injectTouchIcon(slug: string) {
@@ -135,6 +157,18 @@ export class ButtonPage implements OnInit, OnDestroy {
     link.href = href;
     this.document.head.appendChild(link);
     this.touchIconEl = link;
+  }
+
+  async triggerInstall() {
+    if (this.deferredPrompt) {
+      this.deferredPrompt.prompt();
+      const { outcome } = await this.deferredPrompt.userChoice;
+      this.deferredPrompt = null;
+      this.canNativeInstall.set(false);
+      if (outcome === 'accepted') this.showInstallModal.set(false);
+    } else {
+      this.showInstallModal.set(true);
+    }
   }
 
   async presionar() {
