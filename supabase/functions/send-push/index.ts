@@ -3,7 +3,6 @@ import webpush from 'https://esm.sh/web-push@3.6.7';
 
 const SUPABASE_URL          = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const SUPABASE_ANON_KEY     = Deno.env.get('SUPABASE_ANON_KEY')!;
 const VAPID_PUBLIC_KEY      = Deno.env.get('VAPID_PUBLIC_KEY')!;
 const VAPID_PRIVATE_KEY     = Deno.env.get('VAPID_PRIVATE_KEY')!;
 const VAPID_SUBJECT         = Deno.env.get('VAPID_SUBJECT')!;
@@ -24,12 +23,10 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) return err(401, 'No autorizado');
 
-  // Verificar JWT y obtener usuario
-  const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    headers: { 'Authorization': authHeader, 'apikey': SUPABASE_ANON_KEY },
-  });
-  if (!userRes.ok) return err(401, 'No autorizado');
-  const user = await userRes.json();
+  // Verificar JWT usando el cliente admin (más fiable que /auth/v1/user)
+  const jwt = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: authError } = await db.auth.getUser(jwt);
+  if (authError || !user) return err(401, 'No autorizado');
 
   const { button_id, pressed_by } = await req.json().catch(() => ({}));
   if (!button_id) return err(400, 'Falta button_id');
