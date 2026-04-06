@@ -49,6 +49,8 @@ export class AuthService {
 
   async logout(): Promise<void> {
     await this.supabase.auth.signOut();
+    localStorage.clear();
+    sessionStorage.clear();
   }
 
   isLoggedIn(): boolean {
