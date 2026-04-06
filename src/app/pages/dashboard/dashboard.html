@@ -120,8 +120,15 @@
                 (click)="tapCard(btn)"
                 [disabled]="pressingId() === btn.id"
                 class="relative flex flex-col items-center justify-between gap-3 p-4 rounded-3xl active:scale-95 transition-all text-center overflow-hidden min-h-[148px] disabled:opacity-70"
-                [class]="!btn.isOwn && !canPressSub(btn) ? 'grayscale opacity-50 cursor-default' : ''"
+                [class]="(!btn.isOwn && !canPressSub(btn)) || btn.isMuted ? 'grayscale opacity-50 cursor-default' : (btn.isOwn && btn.is_paused ? 'grayscale opacity-60' : '')"
                 [style.background-color]="colorHex(btn.color) + '1a'">
+
+                <!-- Badge pausa / silencio -->
+                @if (btn.isOwn && btn.is_paused) {
+                  <span class="absolute top-2 right-2 text-sm leading-none">⏸</span>
+                } @else if (!btn.isOwn && btn.isMuted) {
+                  <span class="absolute top-2 right-2 text-sm leading-none">🔇</span>
+                }
 
                 <!-- Icon -->
                 <div class="w-14 h-14 rounded-full bg-white/70 flex items-center justify-center mt-1 flex-shrink-0">
@@ -151,6 +158,8 @@
                         [style.background-color]="colorHex(btn.color)">
                     {{ btn.followerCount }} suscriptor{{ btn.followerCount !== 1 ? 'es' : '' }}
                   </span>
+                } @else if (btn.isMuted) {
+                  <span class="text-xs font-medium text-gray-400">Silenciado</span>
                 } @else if (canPressSub(btn)) {
                   <span class="text-xs font-medium text-gray-500">Presionar</span>
                 } @else {

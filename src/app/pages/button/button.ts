@@ -38,6 +38,13 @@ export class ButtonPage implements OnInit, OnDestroy {
   pushStatus    = signal<'idle' | 'sending' | 'sent' | 'error'>('idle');
   pushMsg       = signal('');
 
+  paused        = signal(false);
+  muted         = signal(false);
+  pauseLoading  = signal(false);
+  muteLoading   = signal(false);
+
+  mutedCount    = computed(() => this.subscribers().filter((s: any) => s.is_muted).length);
+
   activeTab     = signal<Tab>('suscritos');
   subscribers   = signal<any[]>([]);
   pressLog      = signal<any[]>([]);
@@ -107,19 +114,22 @@ export class ButtonPage implements OnInit, OnDestroy {
     if (!btn) { this.notFound.set(true); this.loading.set(false); return; }
 
     this.button.set(btn);
+    this.paused.set(btn.is_paused);
     const userId = this.auth.user()?.id;
     this.isOwner.set(btn.owner_id === userId);
 
     // Ícono dinámico para "Añadir a pantalla de inicio"
     this.injectTouchIcon(btn.slug);
 
-    // Verificar follow y push de forma paralela
-    const [isFollowing, hasPush] = await Promise.all([
+    // Verificar follow, push y mute en paralelo
+    const [isFollowing, hasPush, isMuted] = await Promise.all([
       this.push.isFollowing(btn.id),
       this.push.isSubscribed(btn.id),
+      !this.isOwner() ? this.push.isMuted(btn.id) : Promise.resolve(false),
     ]);
     this.following.set(isFollowing);
     this.pushEnabled.set(hasPush);
+    this.muted.set(isMuted);
 
     // Load owner data upfront
     if (this.isOwner()) {
@@ -175,14 +185,46 @@ export class ButtonPage implements OnInit, OnDestroy {
     if (this.pushStatus() === 'sending') return;
     this.pushStatus.set('sending');
     try {
-      const { sent } = await this.push.sendPush(this.button()!.id, this.userName());
-      this.pushMsg.set(`Notificación enviada a ${sent} dispositivo${sent !== 1 ? 's' : ''}`);
+      const result = await this.push.sendPush(this.button()!.id, this.userName());
+      if (result.paused) {
+        this.pushMsg.set('Botón pausado – no se enviaron notificaciones');
+      } else {
+        this.pushMsg.set(`Notificación enviada a ${result.sent} dispositivo${result.sent !== 1 ? 's' : ''}`);
+      }
       this.pushStatus.set('sent');
     } catch (e: any) {
       this.pushMsg.set(e.message ?? 'Error al enviar');
       this.pushStatus.set('error');
     }
     setTimeout(() => this.pushStatus.set('idle'), 3000);
+  }
+
+  async togglePause() {
+    if (this.pauseLoading()) return;
+    this.pauseLoading.set(true);
+    try {
+      const newPaused = !this.paused();
+      await this.btnSvc.setPaused(this.button()!.id, newPaused);
+      this.paused.set(newPaused);
+    } catch (e: any) {
+      console.error('togglePause error:', e);
+    } finally {
+      this.pauseLoading.set(false);
+    }
+  }
+
+  async toggleMute() {
+    if (this.muteLoading()) return;
+    this.muteLoading.set(true);
+    try {
+      const newMuted = !this.muted();
+      await this.push.toggleMute(this.button()!.id, newMuted);
+      this.muted.set(newMuted);
+    } catch (e: any) {
+      console.error('toggleMute error:', e);
+    } finally {
+      this.muteLoading.set(false);
+    }
   }
 
   async toggleFollow() {

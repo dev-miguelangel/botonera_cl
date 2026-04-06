@@ -127,7 +127,39 @@ export class PushService {
     if (error) console.error('PushService.savePushToDb error:', error);
   }
 
-  async sendPush(buttonId: string, pressedBy: string): Promise<{ sent: number }> {
+  async isMuted(buttonId: string): Promise<boolean> {
+    const { data: { session } } = await this.supabase.auth.getSession();
+    if (!session) return false;
+    const { data } = await this.supabase
+      .from('follows')
+      .select('is_muted')
+      .eq('button_id', buttonId)
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+    return data?.is_muted ?? false;
+  }
+
+  async toggleMute(buttonId: string, muted: boolean): Promise<void> {
+    const { data: { session } } = await this.supabase.auth.getSession();
+    if (!session) return;
+    await this.supabase.from('follows')
+      .update({ is_muted: muted })
+      .eq('button_id', buttonId)
+      .eq('user_id', session.user.id);
+  }
+
+  async getMutedButtonIds(): Promise<string[]> {
+    const { data: { session } } = await this.supabase.auth.getSession();
+    if (!session) return [];
+    const { data } = await this.supabase
+      .from('follows')
+      .select('button_id')
+      .eq('user_id', session.user.id)
+      .eq('is_muted', true);
+    return data?.map((f: any) => f.button_id) ?? [];
+  }
+
+  async sendPush(buttonId: string, pressedBy: string): Promise<{ sent: number; paused?: boolean }> {
     const { data: { session } } = await this.supabase.auth.getSession();
     if (!session) throw new Error('Sin sesión');
 

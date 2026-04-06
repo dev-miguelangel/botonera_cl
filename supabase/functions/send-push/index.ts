@@ -78,13 +78,21 @@ Deno.serve(async (req) => {
   });
   await db.from('buttons').update({ last_pressed_at: new Date().toISOString() }).eq('id', button_id);
 
-  // Obtener suscriptores del botón
-  const { data: subs, error: subsErr } = await db
-    .from('subscriptions')
-    .select('id, endpoint, p256dh, auth_token')
-    .eq('button_id', button_id);
+  // Si el botón está pausado, registrar el press pero no enviar pushes
+  if (button.is_paused) {
+    console.log(`send-push [${button.slug}]: paused, skip push`);
+    return ok({ sent: 0, paused: true });
+  }
+
+  // Obtener suscriptores y usuarios muteados en paralelo
+  const [{ data: allSubs, error: subsErr }, { data: mutedFollows }] = await Promise.all([
+    db.from('subscriptions').select('id, endpoint, p256dh, auth_token, user_id').eq('button_id', button_id),
+    db.from('follows').select('user_id').eq('button_id', button_id).eq('is_muted', true),
+  ]);
 
   if (subsErr) return err(500, subsErr.message);
+  const mutedUserIds = new Set(mutedFollows?.map((f: any) => f.user_id) ?? []);
+  const subs = allSubs?.filter(s => !mutedUserIds.has(s.user_id)) ?? [];
   if (!subs || subs.length === 0) return ok({ sent: 0, message: 'Sin suscriptores' });
 
   const hora = new Intl.DateTimeFormat('es-CL', {
