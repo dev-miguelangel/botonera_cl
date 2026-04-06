@@ -49,13 +49,13 @@ Deno.serve(async (req) => {
     return err(403, 'Solo el dueño puede presionar este botón');
   }
   if (button.press_policy === 'subscribers') {
-    const { data: sub } = await db
-      .from('subscriptions')
+    const { data: follow } = await db
+      .from('follows')
       .select('id')
       .eq('button_id', button_id)
       .eq('user_id', user.id)
       .maybeSingle();
-    if (!sub) return err(403, 'Solo suscriptores pueden presionar este botón');
+    if (!follow) return err(403, 'Solo suscriptores pueden presionar este botón');
   }
 
   // Rate limit: contar presiones en la ventana temporal
