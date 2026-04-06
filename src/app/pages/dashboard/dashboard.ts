@@ -122,4 +122,5 @@ export class Dashboard implements OnInit {
   }
 
   logout() { this.auth.logout(); }
+  switchAccount() { this.auth.switchAccount(); }
 }

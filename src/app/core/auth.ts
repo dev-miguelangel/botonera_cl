@@ -47,6 +47,19 @@ export class AuthService {
     });
   }
 
+  async switchAccount(): Promise<void> {
+    try { await this.supabase.auth.signOut(); } catch {}
+    localStorage.clear();
+    sessionStorage.clear();
+    await this.supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: { prompt: 'select_account' },
+      },
+    });
+  }
+
   async logout(): Promise<void> {
     try { await this.supabase.auth.signOut(); } catch {}
     localStorage.clear();
