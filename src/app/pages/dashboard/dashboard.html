@@ -86,20 +86,13 @@
     }
 
     <!-- PAGE CONTENT -->
-    <main class="flex-1 p-6 max-w-3xl w-full mx-auto">
+    <main class="flex-1 p-4 sm:p-6 max-w-3xl w-full mx-auto">
 
-      <div class="flex items-center justify-between gap-3 mb-8">
+      <div class="flex items-center justify-between gap-3 mb-6">
         <div class="min-w-0">
           <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">Mi botonera</h1>
           <p class="text-sm text-gray-400 mt-0.5 truncate">Hola, {{ userName() }}</p>
         </div>
-        <a routerLink="/create"
-           class="inline-flex flex-shrink-0 items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all shadow-sm shadow-indigo-200">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-          </svg>
-          Nuevo botón
-        </a>
       </div>
 
       @if (loading()) {
@@ -112,72 +105,75 @@
         </div>
       } @else {
 
-        <!-- Mis botones -->
-        <section class="mb-10">
-          <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Mis botones</h2>
-          @if (showWizard()) {
-            <app-onboarding-wizard
-              (created)="onWizardCreated($event)"
-              (dismissed)="onWizardDismissed()" />
-          } @else if (myButtons().length === 0) {
-            <div class="bg-white border border-dashed border-gray-200 rounded-2xl p-10 text-center">
-              <p class="text-gray-400 text-sm mb-3">Todavía no tienes botones</p>
-              <a routerLink="/create"
-                 class="text-indigo-600 font-semibold text-sm hover:underline">
-                Crear mi primer botón →
-              </a>
-            </div>
-          } @else {
-            <div class="grid gap-3 sm:grid-cols-2">
-              @for (btn of myButtons(); track btn.id) {
-                <button (click)="navigateTo(btn.slug)"
-                        class="w-full min-w-0 bg-white border border-gray-100 rounded-2xl p-5 text-left hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-50 transition-all group overflow-hidden">
-                  <div class="flex items-start justify-between gap-2 mb-3">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                      </svg>
-                    </div>
-                    <span class="flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                      {{ btn.press_policy === 'owner_only' ? 'Solo yo' : btn.press_policy === 'subscribers' ? 'Suscritos' : 'Público' }}
-                    </span>
-                  </div>
-                  <p class="font-bold text-gray-900 truncate">{{ btn.name }}</p>
-                  @if (btn.description) {
-                    <p class="text-xs text-gray-400 mt-0.5 truncate">{{ btn.description }}</p>
-                  }
-                  @if (btn.last_pressed_at) {
-                    <p class="text-xs text-gray-300 mt-2">Última vez: {{ btn.last_pressed_at | date:'dd/MM HH:mm' }}</p>
-                  }
-                </button>
-              }
-            </div>
-          }
-        </section>
+        <!-- Onboarding wizard (solo cuando no tiene botones propios) -->
+        @if (showWizard()) {
+          <app-onboarding-wizard
+            (created)="onWizardCreated($event)"
+            (dismissed)="onWizardDismissed()" />
+        } @else {
 
-        <!-- Suscritos -->
-        @if (subButtons().length > 0) {
-          <section>
-            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Suscritos</h2>
-            <div class="grid gap-3 sm:grid-cols-2">
-              @for (btn of subButtons(); track btn.id) {
-                <button (click)="navigateTo(btn.slug)"
-                        class="bg-white border border-gray-100 rounded-2xl p-5 text-left hover:border-indigo-200 hover:shadow-md transition-all group">
-                  <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 mb-3 group-hover:bg-indigo-50 transition-colors">
-                    <svg class="w-5 h-5 text-gray-500 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          <!-- GRID DE BOTONES -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+            @for (btn of allButtons(); track btn.id) {
+              <button
+                (click)="tapCard(btn)"
+                [disabled]="pressingId() === btn.id"
+                class="relative flex flex-col items-center justify-between gap-3 p-4 rounded-3xl active:scale-95 transition-all text-center overflow-hidden min-h-[148px] disabled:opacity-70"
+                [class]="!btn.isOwn && !canPressSub(btn) ? 'grayscale opacity-50 cursor-default' : ''"
+                [style.background-color]="colorHex(btn.color) + '1a'">
+
+                <!-- Icon -->
+                <div class="w-14 h-14 rounded-full bg-white/70 flex items-center justify-center mt-1 flex-shrink-0">
+                  @if (pressingId() === btn.id) {
+                    <svg class="w-7 h-7 animate-spin" [style.color]="colorHex(btn.color)" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                     </svg>
-                  </div>
-                  <p class="font-bold text-gray-900 truncate">{{ btn.name }}</p>
-                  @if (btn.description) {
-                    <p class="text-xs text-gray-400 mt-0.5 truncate">{{ btn.description }}</p>
+                  } @else {
+                    <span class="material-symbols-outlined"
+                          [style.color]="colorHex(btn.color)"
+                          style="font-size: 32px; font-variation-settings: 'FILL' 1">{{ btn.icon || 'notifications' }}</span>
                   }
-                </button>
-              }
-            </div>
-          </section>
-        }
+                </div>
 
+                <!-- Name -->
+                <p class="font-extrabold text-gray-900 text-sm leading-tight w-full truncate px-1">{{ btn.name }}</p>
+
+                <!-- Bottom row -->
+                @if (pressResult()?.id === btn.id) {
+                  <p class="text-xs font-semibold leading-tight"
+                     [class]="pressResult()!.ok ? 'text-emerald-600' : 'text-red-500'">
+                    {{ pressResult()!.msg }}
+                  </p>
+                } @else if (btn.isOwn) {
+                  <span class="text-xs font-semibold text-white px-2.5 py-0.5 rounded-full"
+                        [style.background-color]="colorHex(btn.color)">
+                    {{ btn.followerCount }} suscriptor{{ btn.followerCount !== 1 ? 'es' : '' }}
+                  </span>
+                } @else if (canPressSub(btn)) {
+                  <span class="text-xs font-medium text-gray-500">Presionar</span>
+                } @else {
+                  <span class="text-xs font-medium text-gray-400">Solo el dueño</span>
+                }
+
+              </button>
+            }
+
+            <!-- Tarjeta "+" para nuevo botón -->
+            <a routerLink="/create"
+               class="flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-gray-200 bg-white min-h-[148px] hover:border-indigo-300 hover:bg-indigo-50 active:scale-95 transition-all">
+              <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+              </div>
+              <p class="text-xs font-semibold text-gray-400">Nuevo botón</p>
+            </a>
+
+          </div>
+
+        }
       }
     </main>
   </div>

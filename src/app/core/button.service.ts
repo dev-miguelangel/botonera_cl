@@ -111,6 +111,19 @@ export class ButtonService {
     await this.supabase.from('buttons').delete().eq('id', id);
   }
 
+  async getFollowerCounts(buttonIds: string[]): Promise<Record<string, number>> {
+    if (!buttonIds.length) return {};
+    const { data } = await this.supabase
+      .from('follows')
+      .select('button_id')
+      .in('button_id', buttonIds);
+    const counts: Record<string, number> = {};
+    for (const row of data ?? []) {
+      counts[row.button_id] = (counts[row.button_id] ?? 0) + 1;
+    }
+    return counts;
+  }
+
   async getSubscribers(buttonId: string) {
     const { data } = await this.supabase
       .from('follows')
