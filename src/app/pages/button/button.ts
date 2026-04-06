@@ -40,8 +40,9 @@ export class ButtonPage implements OnInit, OnDestroy {
 
   paused        = signal(false);
   muted         = signal(false);
-  pauseLoading  = signal(false);
-  muteLoading   = signal(false);
+  pauseLoading       = signal(false);
+  muteLoading        = signal(false);
+  unsubscribeLoading = signal(false);
 
   mutedCount    = computed(() => this.subscribers().filter((s: any) => s.is_muted).length);
 
@@ -211,6 +212,20 @@ export class ButtonPage implements OnInit, OnDestroy {
       console.error('togglePause error:', e);
     } finally {
       this.pauseLoading.set(false);
+    }
+  }
+
+  async unsubscribePush() {
+    if (this.unsubscribeLoading()) return;
+    this.unsubscribeLoading.set(true);
+    try {
+      await this.push.unsubscribePush(this.button()!.id);
+      this.pushEnabled.set(false);
+      this.muted.set(false);
+    } catch (e: any) {
+      console.error('unsubscribePush error:', e);
+    } finally {
+      this.unsubscribeLoading.set(false);
     }
   }
 

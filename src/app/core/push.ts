@@ -148,6 +148,16 @@ export class PushService {
       .eq('user_id', session.user.id);
   }
 
+  async unsubscribePush(buttonId: string): Promise<void> {
+    const sub = await firstValueFrom(this.swPush.subscription.pipe(timeout(3000), catchError(() => of(null))));
+    if (sub) {
+      await this.supabase.from('subscriptions')
+        .delete()
+        .eq('button_id', buttonId)
+        .eq('endpoint', sub.endpoint);
+    }
+  }
+
   async getMutedButtonIds(): Promise<string[]> {
     const { data: { session } } = await this.supabase.auth.getSession();
     if (!session) return [];

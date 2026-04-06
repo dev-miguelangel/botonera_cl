@@ -92,103 +92,130 @@
           }
         }
 
-        <!-- Seguir / notificaciones — visible para todos -->
-        <div class="flex flex-col items-center gap-3 w-full">
+        <!-- Área suscriptor (no owner) -->
+        @if (!isOwner()) {
+          <div class="flex flex-col items-center gap-3 w-full">
 
-            <!-- Botón seguir -->
-            <button
-              (click)="toggleFollow()"
-              [disabled]="subLoading()"
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 disabled:opacity-50"
-              [class]="following()
-                ? 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200'">
-              @if (subLoading()) {
-                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                </svg>
-              } @else if (following()) {
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                </svg>
-              } @else {
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                </svg>
-              }
-              {{ following() ? 'Siguiendo (toca para dejar de seguir)' : 'Seguir este botón' }}
-            </button>
-
-            <!-- Activar notificaciones push (solo si ya sigue y aún no tiene push) -->
-            @if (following() && !pushEnabled()) {
+            @if (!following()) {
+              <!-- No sigue: botón para seguir -->
               <button
-                (click)="enablePush()"
-                [disabled]="pushLoading()"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95 disabled:opacity-50">
-                @if (pushLoading()) {
-                  <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                (click)="toggleFollow()"
+                [disabled]="subLoading()"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50">
+                @if (subLoading()) {
+                  <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                   </svg>
                 } @else {
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                   </svg>
                 }
-                Activar notificaciones push
+                Seguir este botón
               </button>
-            }
+            } @else {
+              <!-- Sigue: panel con las 3 opciones -->
+              <div class="w-full rounded-2xl border border-gray-100 bg-gray-50 divide-y divide-gray-100 overflow-hidden">
 
-            @if (following() && pushEnabled()) {
-              <p class="text-xs text-emerald-600 flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                </svg>
-                Notificaciones activas
-              </p>
-            }
-
-            <!-- Silenciar (solo para suscriptores con push activo) -->
-            @if (!isOwner() && following() && pushEnabled()) {
-              <button
-                (click)="toggleMute()"
-                [disabled]="muteLoading()"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all active:scale-95 disabled:opacity-50"
-                [class]="muted()
-                  ? 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                  : 'border-gray-200 text-gray-500 hover:bg-gray-50'">
-                @if (muteLoading()) {
-                  <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                <!-- Estado -->
+                <div class="flex items-center gap-2 px-4 py-3">
+                  <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                   </svg>
-                } @else {
-                  <span class="text-base leading-none">{{ muted() ? '🔇' : '🔔' }}</span>
-                }
-                {{ muted() ? 'Silenciado (toca para reactivar)' : 'Silenciar notificaciones' }}
-              </button>
-            }
+                  <span class="text-sm font-semibold text-gray-700">Siguiendo este botón</span>
+                  @if (pushEnabled()) {
+                    <span class="ml-auto text-xs text-emerald-600 font-medium">Avisos activos</span>
+                  } @else {
+                    <span class="ml-auto text-xs text-gray-400">Sin avisos</span>
+                  }
+                </div>
 
-            <!-- Pausar (solo owner) -->
-            @if (isOwner()) {
-              <button
-                (click)="togglePause()"
-                [disabled]="pauseLoading()"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all active:scale-95 disabled:opacity-50"
-                [class]="paused()
-                  ? 'border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100'
-                  : 'border-gray-200 text-gray-500 hover:bg-gray-50'">
-                @if (pauseLoading()) {
-                  <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                } @else {
-                  <span class="text-base leading-none">{{ paused() ? '▶' : '⏸' }}</span>
+                <!-- Activar avisos en el celular (si no tiene push) -->
+                @if (!pushEnabled()) {
+                  <button
+                    (click)="enablePush()"
+                    [disabled]="pushLoading()"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition disabled:opacity-50 text-left">
+                    @if (pushLoading()) {
+                      <svg class="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                    } @else {
+                      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                      </svg>
+                    }
+                    Recibir avisos en este celular
+                  </button>
                 }
-                {{ paused() ? 'Reanudar notificaciones' : 'Pausar notificaciones' }}
-              </button>
+
+                <!-- Pausar mis avisos (mute toggle) — solo si tiene push -->
+                @if (pushEnabled()) {
+                  <button
+                    (click)="toggleMute()"
+                    [disabled]="muteLoading()"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-white transition disabled:opacity-50 text-left"
+                    [class]="muted() ? 'text-amber-600' : 'text-gray-600'">
+                    @if (muteLoading()) {
+                      <svg class="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                    } @else {
+                      <span class="text-base leading-none flex-shrink-0">{{ muted() ? '▶' : '⏸' }}</span>
+                    }
+                    <div>
+                      <p>{{ muted() ? 'Reanudar mis avisos' : 'Pausar mis avisos' }}</p>
+                      <p class="text-xs text-gray-400 font-normal">{{ muted() ? 'Volverás a recibir avisos de este botón' : 'Dejas de recibir avisos, pero sigues en el grupo' }}</p>
+                    </div>
+                  </button>
+
+                  <!-- Quitar del celular -->
+                  <button
+                    (click)="unsubscribePush()"
+                    [disabled]="unsubscribeLoading()"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-white transition disabled:opacity-50 text-left">
+                    @if (unsubscribeLoading()) {
+                      <svg class="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                    } @else {
+                      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9M13 10h.01"/>
+                      </svg>
+                    }
+                    <div>
+                      <p>Quitar avisos de este celular</p>
+                      <p class="text-xs text-gray-400 font-normal">Sigues en el grupo, pero este celular deja de recibir avisos</p>
+                    </div>
+                  </button>
+                }
+
+                <!-- Dejar de seguir -->
+                <button
+                  (click)="toggleFollow()"
+                  [disabled]="subLoading()"
+                  class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 transition disabled:opacity-50 text-left">
+                  @if (subLoading()) {
+                    <svg class="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                  } @else {
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                  }
+                  <div>
+                    <p>Dejar de seguir</p>
+                    <p class="text-xs text-gray-400 font-normal">Sales del grupo y dejas de recibir avisos</p>
+                  </div>
+                </button>
+
+              </div>
             }
 
             @if (subMsg()) {
@@ -196,6 +223,28 @@
             }
 
           </div>
+        }
+
+        <!-- Pausar (solo owner) -->
+        @if (isOwner()) {
+          <button
+            (click)="togglePause()"
+            [disabled]="pauseLoading()"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all active:scale-95 disabled:opacity-50"
+            [class]="paused()
+              ? 'border-amber-200 text-amber-600 bg-amber-50 hover:bg-amber-100'
+              : 'border-gray-200 text-gray-500 hover:bg-gray-50'">
+            @if (pauseLoading()) {
+              <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+            } @else {
+              <span class="text-base leading-none">{{ paused() ? '▶' : '⏸' }}</span>
+            }
+            {{ paused() ? 'Reanudar notificaciones' : 'Pausar notificaciones' }}
+          </button>
+        }
 
           <!-- Añadir a pantalla de inicio (solo si no está instalada) -->
           @if (!isStandalone) {
